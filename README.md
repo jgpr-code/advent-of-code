@@ -16,17 +16,20 @@ This repository will collect all my solutions to AdventOfCode over the years.
 
 - ``cargo new Day<dd>_<Name>_Rust``
 
-#### Typescript
-
-#### F#
-
 #### Haskell
 
 #### Kotlin
 
-#### Racket
+#### Fsharp
+
+#### Csharp
+
+#### Typescript
 
 #### Python
 
-#### C#
+#### Powershell
 
+#### Racket
+
+#### Clojure
