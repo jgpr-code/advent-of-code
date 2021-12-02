@@ -4,6 +4,23 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::io::{self, Read};
 
+fn main() -> io::Result<()> {
+    let mut stdin = io::stdin();
+    let mut buffer = String::new();
+    stdin.read_to_string(&mut buffer)?;
+
+    let mut amount_valid = 0;
+    for line in buffer.lines() {
+        let password = parse_line(line);
+        if is_valid_password(&password) {
+            amount_valid += 1;
+        }
+    }
+
+    println!("Part 1: {}", amount_valid);
+    Ok(())
+}
+
 struct PasswordPolicy {
     c: char,
     min_c: usize,
@@ -37,23 +54,6 @@ fn is_valid_password(password: &Password) -> bool {
         .filter(|c| *c == password.policy.c)
         .count();
     password.policy.min_c <= count_c && count_c <= password.policy.max_c
-}
-
-fn main() -> io::Result<()> {
-    let mut stdin = io::stdin();
-    let mut buffer = String::new();
-    stdin.read_to_string(&mut buffer)?;
-
-    let mut amount_valid = 0;
-    for line in buffer.lines() {
-        let password = parse_line(line);
-        if is_valid_password(&password) {
-            amount_valid += 1;
-        }
-    }
-
-    println!("Part 1: {}", amount_valid);
-    Ok(())
 }
 
 #[cfg(test)]
