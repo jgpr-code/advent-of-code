@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "Day02_Dive_Rust"
+name = "day02_dive_rust"
 version = "0.1.0"

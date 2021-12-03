@@ -1,5 +1,5 @@
 [package]
-name = "Day00_Setup_Rust"
+name = "day00_setup_rust"
 version = "0.1.0"
 edition = "2018"
 

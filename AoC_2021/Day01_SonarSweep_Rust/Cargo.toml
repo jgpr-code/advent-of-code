@@ -1,5 +1,5 @@
 [package]
-name = "Day01_SonarSweep_Rust"
+name = "day01_sonar_sweep_rust"
 version = "0.1.0"
 edition = "2021"
 
