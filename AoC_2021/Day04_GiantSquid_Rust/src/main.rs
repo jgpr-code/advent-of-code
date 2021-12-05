@@ -6,10 +6,11 @@ fn main() -> io::Result<()> {
     let mut buffer = String::new();
     stdin.read_to_string(&mut buffer)?;
     part_one(&buffer);
+    part_two(&buffer);
     Ok(())
 }
 
-fn part_one(buffer: &str) {
+fn parse_input(buffer: &str) -> (Vec<i32>, Vec<BingoCard>) {
     let mut iter = buffer.split_terminator("\r\n\r\n");
 
     let guesses: Vec<i32> = iter
@@ -19,40 +20,77 @@ fn part_one(buffer: &str) {
         .map(|x| x.parse::<i32>().expect("failed to parse a guess as i32"))
         .collect();
 
-    let mut bingo_cards: Vec<BingoCard> = iter.map(|x| BingoCard::new(x)).collect();
+    let bingo_cards: Vec<BingoCard> = iter.map(|x| BingoCard::new(x)).collect();
 
-    let (last_guess, bingo_winner) =
-        play_bingo(&guesses, &mut bingo_cards).expect("no winner at all");
-
-    println!("Part 1: {:?}", last_guess * bingo_winner.sum_of_unmarked());
-
-    //println!("{:?}", guesses);
-    //println!("{:?}", bingo_cards);
+    (guesses, bingo_cards)
 }
 
-fn play_bingo(guesses: &[i32], bingo_cards: &mut [BingoCard]) -> Option<(i32, BingoCard)> {
-    for i in 0..guesses.len() {
+fn part_one(buffer: &str) {
+    let (guesses, mut bingo_cards) = parse_input(buffer);
+
+    let (last_guess, first_winner) =
+        play_until_first_winner(&guesses, &mut bingo_cards).expect("no first winner");
+
+    println!("Part 1: {}", last_guess * first_winner.sum_of_unmarked());
+}
+
+fn part_two(buffer: &str) {
+    let (guesses, mut bingo_cards) = parse_input(buffer);
+
+    let (last_guess, last_winner) =
+        play_until_last_winner(&guesses, &mut bingo_cards).expect("no last winner");
+
+    println!("Part 2: {}", last_guess * last_winner.sum_of_unmarked());
+}
+
+fn play_until_first_winner(
+    guesses: &[i32],
+    bingo_cards: &mut [BingoCard],
+) -> Option<(i32, BingoCard)> {
+    for guess in guesses.iter() {
         for bingo_card in bingo_cards.iter_mut() {
-            if bingo_card.play_guess(&guesses[i]) {
-                return Some((guesses[i], bingo_card.clone()));
+            bingo_card.play_guess(guess);
+            if bingo_card.is_winning {
+                return Some((*guess, bingo_card.clone()));
             }
         }
     }
     None
 }
 
-//fn play_bingo_guess(guess: i32, )
+fn play_until_last_winner(
+    guesses: &[i32],
+    bingo_cards: &mut [BingoCard],
+) -> Option<(i32, BingoCard)> {
+    let required_winners = bingo_cards.len();
+    let mut current_winners = 0;
+    for guess in guesses.iter() {
+        for bingo_card in bingo_cards.iter_mut() {
+            if bingo_card.is_winning {
+                continue;
+            }
+            bingo_card.play_guess(guess);
+            if bingo_card.is_winning {
+                current_winners += 1;
+                if current_winners == required_winners {
+                    return Some((*guess, bingo_card.clone()));
+                }
+            }
+        }
+    }
+    None
+}
 
 #[derive(Debug, Clone)]
 struct BingoCard {
     card: Vec<Vec<i32>>,
-
+    rows: usize,
+    cols: usize,
     num_to_pos: HashMap<i32, (usize, usize)>,
-
     correct_in_row: HashMap<usize, usize>,
     correct_in_col: HashMap<usize, usize>,
-
     marked_on_card: HashSet<i32>,
+    pub is_winning: bool,
 }
 
 impl BingoCard {
@@ -76,39 +114,33 @@ impl BingoCard {
                 num_to_pos.insert(card[row][col], (row, col));
             }
         }
-        let mut correct_in_row = HashMap::new();
-        for row in 0..rows {
-            correct_in_row.insert(row, 0);
-        }
-        let mut correct_in_col = HashMap::new();
-        for col in 0..cols {
-            correct_in_col.insert(col, 0);
-        }
 
         BingoCard {
             card,
+            rows,
+            cols,
             num_to_pos,
-            correct_in_row,
-            correct_in_col,
+            correct_in_row: HashMap::new(),
+            correct_in_col: HashMap::new(),
             marked_on_card: HashSet::new(),
+            is_winning: false,
         }
     }
 
-    fn play_guess(&mut self, guess: &i32) -> bool {
+    fn play_guess(&mut self, guess: &i32) {
         if self.marked_on_card.contains(guess) {
-            return false;
+            return;
         }
         if let Some((row, col)) = self.num_to_pos.get(guess) {
+            self.marked_on_card.insert(*guess);
             let in_row = self.correct_in_row.entry(*row).or_insert(0);
             let in_col = self.correct_in_col.entry(*col).or_insert(0);
             *in_row += 1;
             *in_col += 1;
-            self.marked_on_card.insert(*guess);
-            if *in_row == 5 || *in_col == 5 {
-                return true;
+            if *in_row == self.cols || *in_col == self.rows {
+                self.is_winning = true;
             }
         }
-        return false;
     }
 
     fn sum_of_unmarked(&self) -> i32 {
