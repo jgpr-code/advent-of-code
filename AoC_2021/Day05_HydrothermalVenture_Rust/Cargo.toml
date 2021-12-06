@@ -1,5 +1,5 @@
 [package]
-name = "Day05_HydrothermalVenture_Rust"
+name = "day05_hydrothermal_venture_rust"
 version = "0.1.0"
 edition = "2021"
 

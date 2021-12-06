@@ -1,6 +1,5 @@
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::cmp;
 use std::collections::HashMap;
 use std::io::{self, Read};
 use std::mem;
@@ -41,9 +40,46 @@ fn part_one(buffer: &str) {
     println!("Part 1: {}", intersections);
 }
 
-fn part_two(buffer: &str) {}
+fn part_two(buffer: &str) {
+    let line_segments = parse_input(buffer);
+    let mut line_counts: HashMap<(i32, i32), i32> = HashMap::new();
+    let (axis_aligned, diagonal): (Vec<LineSegment>, Vec<LineSegment>) =
+        line_segments.iter().partition(|s| s.is_axis_aligned());
+    for line_segment in axis_aligned {
+        if line_segment.is_vertical() {
+            let (x, (y_begin, y_end)) = line_segment.vertical_range().unwrap();
+            for y in y_begin..y_end + 1 {
+                let entry = line_counts.entry((x, y)).or_insert(0);
+                *entry += 1;
+            }
+        } else {
+            let (y, (x_begin, x_end)) = line_segment.horizontal_range().unwrap();
+            for x in x_begin..x_end + 1 {
+                let entry = line_counts.entry((x, y)).or_insert(0);
+                *entry += 1;
+            }
+        }
+    }
+    for line_segment in diagonal {
+        let step = line_segment.step_delta();
+        let mut current = line_segment.start_point;
+        let end = line_segment.end_point;
+        loop {
+            let entry = line_counts.entry((current.0, current.1)).or_insert(0);
+            *entry += 1;
+            if current == end {
+                break;
+            }
+            current = (current.0 + step.0, current.1 + step.1);
+        }
+    }
+    let intersections = line_counts.iter().filter(|(_, val)| **val > 1).count();
+
+    println!("Part 2: {}", intersections);
+}
 
 // Line segment
+#[derive(Clone, Copy)]
 struct LineSegment {
     start_point: (i32, i32),
     end_point: (i32, i32),
@@ -98,6 +134,12 @@ impl LineSegment {
     }
     fn is_axis_aligned(&self) -> bool {
         self.is_vertical() || self.is_horizontal()
+    }
+
+    fn step_delta(&self) -> (i32, i32) {
+        let dx = self.end_point.0 - self.start_point.0;
+        let dy = self.end_point.1 - self.start_point.1;
+        (dx.signum(), dy.signum())
     }
 
     fn match_to_i32(regex_match: Option<regex::Match>) -> i32 {
