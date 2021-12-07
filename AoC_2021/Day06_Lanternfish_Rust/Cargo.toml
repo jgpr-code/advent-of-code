@@ -1,5 +1,5 @@
 [package]
-name = "Day06_Lanternfish_Rust"
+name = "day06_lanternfish_rust"
 version = "0.1.0"
 edition = "2021"
 
