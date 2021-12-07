@@ -100,3 +100,16 @@ fn filter_by_pos(pos: usize, required_in_pos: char, lines: Vec<&str>) -> Vec<&st
         .filter(|slice| (*slice).chars().nth(pos).unwrap() == required_in_pos)
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+    // TODO common setup which loads the Strings from the files (test.txt, input.txt)
+    #[test]
+    fn part_one_test() {}
+    #[test]
+    fn part_one_input() {}
+    #[test]
+    fn part_two_test() {}
+    #[test]
+    fn part_two_input() {}
+}
