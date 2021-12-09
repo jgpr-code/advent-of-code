@@ -49,3 +49,12 @@ fn gauss_distance(a: i32, b: i32) -> i32 {
 // determine x such that min |a-x| + |b-x| + |c-x|
 // d(a, x) = sum k=1 to |a-x|: k => gauss |a-x| * (|a-x| + 1) / 2 => (x-a)^2 + |x-a| => 2(x-a) + sign(x-a)
 //
+
+// how can this be solved mathematically:
+// min_x sum i=1 to n: d( |crab_i - x| )
+// d(x) = x * (x+1) / 2
+// reformulate to:
+// min_z sum i=1 to n: d( z )
+// s.t. z_i >= +(crab_i - x)
+//      z_i >= -(crab_i - x)
+// constrained quadratic optimization problem
