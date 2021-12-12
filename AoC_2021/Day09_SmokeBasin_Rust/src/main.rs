@@ -94,11 +94,11 @@ impl Grid {
         let mut queue: VecDeque<(i32, i32)> = VecDeque::new();
 
         queue.push_back(low_point);
+        visited.insert((low_point.0, low_point.1));
 
         while !queue.is_empty() {
             let (row, col) = queue.pop_front().unwrap();
             // println!("current: {:?}", (row, col));
-            visited.insert((row, col));
             for k in 0..self.drow.len() {
                 let r = row + self.drow[k];
                 let c = col + self.dcol[k];
@@ -116,6 +116,7 @@ impl Grid {
 
                 if height_difference >= 0 {
                     queue.push_back((r, c));
+                    visited.insert((r, c));
                 }
             }
         }
