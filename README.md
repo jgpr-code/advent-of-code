@@ -24,21 +24,30 @@ This repository collects all solutions to AdventOfCode over the years.
 
 ### Rust
 
+- Utility crate that copies a common template instead of using cargo new
+  - need to learn how to add own cargo commands
+  - of course also need to implement this copy functionality afterwards
+  - should maybe support different templates
+  - this is probably like a cli tool so check out the crates for that
+- Own AoC utiltiy crate
+- Use anyhow or thiserror or build own error functionality (can go in aoc crate as well)
+
 Common structure:
 
 ```Rust
 use std::io::{self, Read};
 
-fn main() -> io::Result<()> {
+fn main() -> /* TODO */ {
     let mut stdin = io::stdin();
     let mut buffer = String::new();
     stdin.read_to_string(&mut buffer)?;
-    part_one(&buffer);
-    part_two(&buffer);
+    let input = parse_buffer(&buffer)?;
+    part_one(&input);
+    part_two(&input);
     Ok(())
 }
 
-fn parse_input(buffer: &str) -> T
+fn parse_buffer(buffer: &str) -> T
 
 fn part_one(buffer: &str) {
     let T = parse_input(buffer);
