@@ -10,21 +10,23 @@ fn main() {
     stdin
         .read_to_string(&mut buffer)
         .expect("failed to read file");
-    let mut input = parse_buffer(&buffer);
-    println!("{:?}", input);
-    println!("Part 1: {}", part_one(&mut input));
-    println!("Part 2: {}", part_two(&input));
+    let mut input_part_one = parse_buffer(&buffer);
+    let mut input_part_two = input_part_one.clone();
+    println!("{:?}", input_part_one);
+    println!("Part 1: {}", part_one(&mut input_part_one));
+    println!("Part 2: {}", part_two(&mut input_part_two));
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct CaveGraph {
     adjacency: HashMap<String, HashMultiSet<String>>,
+    start_label: String,
+    end_label: String,
 }
 
 impl CaveGraph {
     // this assumes that there are no two big_caves next to each other as this would basically result in an infinite amount of paths
-    fn eliminate_big_caves(&mut self) {
-        // for each edge A-b remove A from b's neighbors and add the other neighbors of A instead
+    fn eliminate_big_caves(&mut self, allow_twice: bool) {
         let big_caves: Vec<String> = self
             .adjacency
             .keys()
@@ -39,7 +41,7 @@ impl CaveGraph {
                 neighbor_neighbors.remove(big_cave);
                 // add connections to all other caves connected to big_cave
                 for (j, other_neighbor) in neighbors.iter().enumerate() {
-                    if i == j {
+                    if !allow_twice && i == j {
                         continue;
                     }
                     neighbor_neighbors.insert(other_neighbor.clone());
@@ -51,30 +53,51 @@ impl CaveGraph {
         cave.chars().all(|c| c.is_uppercase())
     }
 
-    fn count_paths(&self) -> i64 {
+    fn count_paths(&self, allow_twice: bool) -> i64 {
         let mut path_count = 0;
-        let start = String::from("start");
-        let end = String::from("end");
-        let mut visited: HashSet<String> = HashSet::new();
-        self.dfs(&mut path_count, start.clone(), end.clone(), &mut visited);
+        let mut visited: HashMap<String, i64> = HashMap::new();
+        self.dfs(
+            &mut path_count,
+            self.start_label.clone(),
+            self.end_label.clone(),
+            &mut visited,
+            allow_twice,
+        );
         path_count
     }
 
-    fn dfs(&self, count: &mut i64, from: String, to: String, visited: &HashSet<String>) {
+    fn dfs(
+        &self,
+        count: &mut i64,
+        from: String,
+        to: String,
+        visited: &HashMap<String, i64>,
+        allow_twice: bool,
+    ) {
         if from == to {
             *count += 1;
             return;
         }
         let mut next_visited = visited.clone();
-        next_visited.insert(from.clone());
-        for neighbor in self
-            .adjacency
-            .get(&from)
-            .unwrap()
-            .iter()
-            .filter(|n| !visited.contains(*n))
-        {
-            self.dfs(count, neighbor.clone(), to.clone(), &next_visited);
+        let elem = next_visited.entry(from.clone()).or_insert(0);
+        *elem += 1;
+        for neighbor in self.adjacency.get(&from).unwrap().iter() {
+            let amount_encountered = next_visited.entry(neighbor.clone()).or_insert(0);
+            if *amount_encountered == 0 {
+                self.dfs(
+                    count,
+                    neighbor.clone(),
+                    to.clone(),
+                    &next_visited,
+                    allow_twice,
+                );
+            } else if *amount_encountered == 1
+                && allow_twice
+                && *neighbor != self.start_label
+                && *neighbor != self.end_label
+            {
+                self.dfs(count, neighbor.clone(), to.clone(), &next_visited, false);
+            }
         }
     }
 }
@@ -86,6 +109,8 @@ fn parse_buffer(buffer: &str) -> CaveGraph {
 
     let mut cave_graph = CaveGraph {
         adjacency: HashMap::new(),
+        start_label: String::from("start"),
+        end_label: String::from("end"),
     };
     for line in buffer.lines() {
         let caps = RE.captures(line).unwrap();
@@ -108,13 +133,17 @@ fn parse_buffer(buffer: &str) -> CaveGraph {
 }
 
 fn part_one(cave_graph: &mut CaveGraph) -> i64 {
-    cave_graph.eliminate_big_caves();
+    let allow_twice = false;
+    cave_graph.eliminate_big_caves(allow_twice);
     println!("{:?}", cave_graph);
-    cave_graph.count_paths()
+
+    cave_graph.count_paths(allow_twice)
 }
 
-fn part_two(cave_graph: &CaveGraph) -> i64 {
-    0
+fn part_two(cave_graph: &mut CaveGraph) -> i64 {
+    let allow_twice = true;
+    cave_graph.eliminate_big_caves(allow_twice);
+    cave_graph.count_paths(allow_twice)
 }
 // build graph
 // replace big Nodes by connecting all its neigbours with each other
