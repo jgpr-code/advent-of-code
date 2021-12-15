@@ -60,6 +60,52 @@ impl Grid {
         }
         neighbors
     }
+
+    fn incremented_grid(&self, increment: i32) -> Grid {
+        let mut content = vec![vec![0; self.cols]; self.rows];
+        for row in 0..self.rows {
+            for col in 0..self.cols {
+                let mut incremented = self.content[row][col];
+                for inc in 0..increment {
+                    incremented += 1;
+                    if incremented == 10 {
+                        incremented = 1;
+                    }
+                }
+                content[row][col] = incremented;
+            }
+        }
+        Grid {
+            content,
+            rows: self.rows,
+            cols: self.cols,
+        }
+    }
+
+    // subgrid access would be useful in the future
+
+    fn enlarged_grid(&self, times: usize) -> Grid {
+        let mut content = vec![vec![0; times * self.cols]; times * self.rows];
+        for tile_row in 0..times {
+            for tile_col in 0..times {
+                let increment = tile_row + tile_col;
+                let incremented_grid = self.incremented_grid(increment as i32);
+                let offset_row = tile_row * self.rows;
+                let offset_col = tile_col * self.cols;
+                for row in 0..self.rows {
+                    for col in 0..self.cols {
+                        content[offset_row + row][offset_col + col] =
+                            incremented_grid.content[row][col];
+                    }
+                }
+            }
+        }
+        Grid {
+            content,
+            rows: times * self.rows,
+            cols: times * self.cols,
+        }
+    }
 }
 
 fn parse_buffer(buffer: &str) -> Grid {
@@ -145,5 +191,6 @@ fn part_one(grid: &Grid) -> i32 {
 }
 
 fn part_two(grid: &Grid) -> i32 {
-    0
+    let enlarged_grid = grid.enlarged_grid(5);
+    part_one(&enlarged_grid)
 }
