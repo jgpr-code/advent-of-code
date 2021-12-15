@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use multiset::HashMultiSet;
 use regex::Regex;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::io::{self, Read};
 
 fn main() {
