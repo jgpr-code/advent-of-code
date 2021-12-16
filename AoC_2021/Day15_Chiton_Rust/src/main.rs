@@ -39,11 +39,13 @@ impl Grid {
         self.neighbors_from_deltas(&pos, &delta_row, &delta_col)
     }
 
+    /*
     fn eight_neighbors(&self, pos: &(i32, i32)) -> Vec<(i32, i32)> {
         let delta_row: Vec<i32> = vec![-1, -1, 0, 1, 1, 1, 0, -1];
         let delta_col: Vec<i32> = vec![0, 1, 1, 1, 0, -1, -1, -1];
         self.neighbors_from_deltas(&pos, &delta_row, &delta_col)
     }
+    */
 
     fn neighbors_from_deltas(
         &self,
@@ -65,14 +67,11 @@ impl Grid {
         let mut content = vec![vec![0; self.cols]; self.rows];
         for row in 0..self.rows {
             for col in 0..self.cols {
-                let mut incremented = self.content[row][col];
-                for inc in 0..increment {
-                    incremented += 1;
-                    if incremented == 10 {
-                        incremented = 1;
-                    }
-                }
-                content[row][col] = incremented;
+                // shift range 1..9 to 0..8 to enable mod
+                let mut incremented = self.content[row][col] - 1;
+                incremented = (incremented + increment) % 9;
+                // shift back
+                content[row][col] = incremented + 1;
             }
         }
         Grid {
