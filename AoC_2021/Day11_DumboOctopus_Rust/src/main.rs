@@ -1,45 +1,45 @@
-use std::collections::HashSet;
+use anyhow::{Context, Result};
+use std::collections::{HashSet, VecDeque};
 use std::io::{self, Read};
-use thiserror::Error as ThisError;
-// use anyhow::Error as AnyhowError;
 
-#[derive(ThisError, Debug)]
-enum AocError {
-    #[error("io")]
-    Io {
-        #[from]
-        source: io::Error,
-    },
-    #[error("could not convert char to digit: {0}")]
-    InvalidCharToDigit(char),
-    /*
-    #[error(transparent)]
-    Other(#[from] AnyhowError),
-    */
-}
-
-fn main() -> Result<(), AocError> {
+fn main() -> Result<()> {
     let mut stdin = io::stdin();
     let mut buffer = String::new();
     stdin.read_to_string(&mut buffer)?;
-    let input = parse_buffer(&buffer)?;
-    println!("Part 1: {}", part_one(&input));
-    println!("Part 2: {}", part_two(&input));
+    let mut input_part_one = parse_buffer(&buffer)?;
+    let mut input_part_two = input_part_one.clone();
+    println!("Part 1: {}", part_one(&mut input_part_one));
+    println!("Part 2: {}", part_two(&mut input_part_two));
     Ok(())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct DumboOctopusGrid {
     grid: Vec<Vec<u32>>,
-    rows: usize,
-    cols: usize,
 }
 
 impl DumboOctopusGrid {
-    fn new(grid: Vec<Vec<u32>>) -> DumboOctopusGrid {
-        let rows = grid.
+    fn rows(&self) -> i32 {
+        self.grid.len() as i32
     }
-    fn simulate_day(&mut self) {
+
+    fn cols(&self) -> i32 {
+        self.grid.get(0).map_or(0, |v| v.len()) as i32
+    }
+
+    fn is_inside(&self, pos: (i32, i32)) -> bool {
+        0 <= pos.0 && pos.0 < self.rows() && 0 <= pos.1 && pos.1 < self.cols()
+    }
+
+    fn value_at(&mut self, pos: (i32, i32)) -> Option<&mut u32> {
+        if !self.is_inside(pos) {
+            None
+        } else {
+            Some(&mut self.grid[pos.0 as usize][pos.1 as usize])
+        }
+    }
+
+    fn simulate_day(&mut self) -> usize {
         let offsets: Vec<(i32, i32)> = vec![
             (-1, 0),
             (-1, 1),
@@ -50,33 +50,76 @@ impl DumboOctopusGrid {
             (0, -1),
             (-1, -1),
         ];
-        let already_flashing: HashSet<(i32, i32)> = HashSet::new();
-    }
-    fn is_inside(&self, pos: (i32, i32)) -> bool {
-        0 <= pos.0 && pos.0 < self.rows as i32 && 0 <= pos.1 && pos.1 < self.cols as i32
+        let mut already_flashing: HashSet<(i32, i32)> = HashSet::new();
+        let mut flashing_queue: VecDeque<(i32, i32)> = VecDeque::new();
+
+        for row in 0..self.rows() {
+            for col in 0..self.cols() {
+                let pos = (row, col);
+                if let Some(value) = self.value_at(pos) {
+                    *value += 1;
+                    if *value > 9 {
+                        already_flashing.insert(pos);
+                        flashing_queue.push_back(pos);
+                    }
+                }
+            }
+        }
+
+        while let Some(pos) = flashing_queue.pop_front() {
+            for offset in offsets.iter() {
+                let neighbor_pos = (pos.0 + offset.0, pos.1 + offset.1);
+                if already_flashing.contains(&neighbor_pos) {
+                    continue;
+                }
+                if let Some(value) = self.value_at(neighbor_pos) {
+                    *value += 1;
+                    if *value > 9 {
+                        already_flashing.insert(neighbor_pos);
+                        flashing_queue.push_back(neighbor_pos);
+                    }
+                }
+            }
+        }
+        for pos in already_flashing.iter() {
+            if let Some(value) = self.value_at(*pos) {
+                *value = 0
+            }
+        }
+        already_flashing.iter().count()
     }
 }
 
-fn parse_buffer(buffer: &str) -> Result<DumboOctopusGrid, AocError> {
+fn parse_buffer(buffer: &str) -> Result<DumboOctopusGrid> {
     let parsed = buffer
         .lines()
         .map(|l| {
             l.chars()
-                .map(|c| c.to_digit(10).ok_or(AocError::InvalidCharToDigit(c)))
-                .collect::<Result<Vec<u32>, AocError>>()
+                .map(|c| c.to_digit(10).context("char was not a valid digit"))
+                .collect::<Result<Vec<u32>>>()
         })
-        .collect::<Result<Vec<Vec<u32>>, AocError>>()?;
+        .collect::<Result<Vec<Vec<u32>>>>()?;
 
     Ok(DumboOctopusGrid { grid: parsed })
 }
 
-fn part_one(input: &DumboOctopusGrid) -> usize {
-    println!("{:?}", input);
-    0
+fn part_one(input: &mut DumboOctopusGrid) -> usize {
+    let mut flashes_total = 0;
+    for _ in 0..100 {
+        flashes_total += input.simulate_day();
+    }
+    flashes_total
 }
 
-fn part_two(input: &DumboOctopusGrid) -> usize {
-    0
+fn part_two(input: &mut DumboOctopusGrid) -> usize {
+    let mut day = 0;
+    loop {
+        day += 1;
+        let amount = input.simulate_day();
+        if amount == (input.rows() * input.cols()) as usize {
+            break day;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -121,26 +164,26 @@ mod tests {
 
     #[test]
     fn part_one_on_test() {
-        let test = get_test();
-        let answer = part_one(&test);
+        let mut test = get_test().clone();
+        let answer = part_one(&mut test);
         assert_eq!(answer, 1656);
     }
     #[test]
     fn part_one_on_input() {
-        let input = get_input();
-        let answer = part_one(&input);
-        assert_eq!(answer, 0);
+        let mut input = get_input().clone();
+        let answer = part_one(&mut input);
+        assert_eq!(answer, 1785);
     }
     #[test]
     fn part_two_on_test() {
-        let test = get_test();
-        let answer = part_two(&test);
-        assert_eq!(answer, 0);
+        let mut test = get_test().clone();
+        let answer = part_two(&mut test);
+        assert_eq!(answer, 195);
     }
     #[test]
     fn part_two_on_input() {
-        let input = get_input();
-        let answer = part_two(&input);
-        assert_eq!(answer, 0);
+        let mut input = get_input().clone();
+        let answer = part_two(&mut input);
+        assert_eq!(answer, 354);
     }
 }
