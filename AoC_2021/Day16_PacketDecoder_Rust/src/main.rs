@@ -121,8 +121,67 @@ struct Packet {
 }
 
 impl Packet {
-    fn evaluate(&self) -> usize {
-        0
+    fn evaluate(&self) -> u128 {
+        match self.type_id {
+            0 => self.sum(),
+            1 => self.product(),
+            2 => self.minimum(),
+            3 => self.maximum(),
+            5 => self.greater_than(),
+            6 => self.less_than(),
+            7 => self.equal_to(),
+            _ => self.literal(),
+        }
+    }
+
+    fn sum(&self) -> u128 {
+        self.packets.iter().map(|p| p.evaluate()).sum()
+    }
+
+    fn product(&self) -> u128 {
+        self.packets.iter().map(|p| p.evaluate()).product()
+    }
+
+    fn minimum(&self) -> u128 {
+        self.packets.iter().map(|p| p.evaluate()).min().unwrap()
+    }
+
+    fn maximum(&self) -> u128 {
+        self.packets.iter().map(|p| p.evaluate()).max().unwrap()
+    }
+
+    fn literal(&self) -> u128 {
+        self.literal
+    }
+
+    fn greater_than(&self) -> u128 {
+        let a = self.packets[0].evaluate();
+        let b = self.packets[1].evaluate();
+        if a > b {
+            1
+        } else {
+            0
+        }
+    }
+
+    fn less_than(&self) -> u128 {
+        let a = self.packets[0].evaluate();
+        let b = self.packets[1].evaluate();
+        if a < b {
+            1
+        } else {
+            0
+        }
+    }
+
+    fn equal_to(&self) -> u128 {
+        let a = self.packets[0].evaluate();
+        let b = self.packets[1].evaluate();
+        if a == b {
+            1
+        } else {
+            0
+        }
     }
 }
 
@@ -152,8 +211,8 @@ fn part_one(top_level_packet: &Packet) -> u32 {
     version_sum
 }
 
-fn part_two(top_level_packet: &Packet) -> u32 {
-    0
+fn part_two(top_level_packet: &Packet) -> u128 {
+    top_level_packet.evaluate()
 }
 
 #[cfg(test)]
@@ -186,5 +245,61 @@ mod tests {
         let packet = "A0016C880162017C3686B18A3D4780";
         let input = parse_buffer(packet);
         assert_eq!(part_one(&input), 31);
+    }
+
+    #[test]
+    fn evaluate_sum() {
+        let packet = "C200B40A82";
+        let input = parse_buffer(packet);
+        assert_eq!(part_two(&input), 3);
+    }
+
+    #[test]
+    fn evaluate_product() {
+        let packet = "04005AC33890";
+        let input = parse_buffer(packet);
+        assert_eq!(part_two(&input), 54);
+    }
+
+    #[test]
+    fn evaluate_minimum() {
+        let packet = "880086C3E88112";
+        let input = parse_buffer(packet);
+        assert_eq!(part_two(&input), 7);
+    }
+
+    #[test]
+    fn evaluate_maximum() {
+        let packet = "CE00C43D881120";
+        let input = parse_buffer(packet);
+        assert_eq!(part_two(&input), 9);
+    }
+
+    #[test]
+    fn evaluate_less_than() {
+        let packet = "D8005AC2A8F0";
+        let input = parse_buffer(packet);
+        assert_eq!(part_two(&input), 1);
+    }
+
+    #[test]
+    fn evaluate_greater_than() {
+        let packet = "F600BC2D8F";
+        let input = parse_buffer(packet);
+        assert_eq!(part_two(&input), 0);
+    }
+
+    #[test]
+    fn evaluate_equal() {
+        let packet = "9C005AC2F8F0";
+        let input = parse_buffer(packet);
+        assert_eq!(part_two(&input), 0);
+    }
+
+    #[test]
+    fn evaluate_sum_equal_product() {
+        let packet = "9C0141080250320F1802104A08";
+        let input = parse_buffer(packet);
+        assert_eq!(part_two(&input), 1);
     }
 }
