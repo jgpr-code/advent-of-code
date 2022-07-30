@@ -90,3 +90,26 @@ aoc_tests!((part_one, "expected"), (part_two, "expected"))
 
 
 ```
+
+what are the goals for each task?
+
+running part1 and part2 and the tests test.txt (small) and input.txt (real)
+
+this is a two part task:
+
+1. the aoc utilities library
+2. cargo generate template
+
+workflow:
+
+1. cargo generate template
+2. create test.txt and input.txt by copying stuff from aoc website manually (maybe improve this later)
+3. implement parse_input part_one and part_two
+4. DONE!
+
+how is data transformed during the different parts of the program?
+
+input is parsed into a custom type (this might be a library type)
+e.g. Vec<i64> or something completely different like FooInput.
+
+part_one and part_two handle that type
