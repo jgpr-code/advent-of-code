@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 #include <unordered_set>
 #include <vector>
 using namespace std;
@@ -44,6 +45,12 @@ int main() {
     sumOfAnswered += groupAnswer.countAnswered();
     sumOfAnsweredByAll += groupAnswer.countAnsweredByAll();
   }
-  cout << "Part 1: " << sumOfAnswered << endl;  // 6587
+
+  // NOTE:
+  // for this to work you have to insert two blank lines
+  // at the end of the input!!!
+  // maybe there are different getline implementations!
+
+  cout << "Part 1: " << sumOfAnswered << endl;
   cout << "Part 2: " << sumOfAnsweredByAll << endl;
 }
