@@ -4,36 +4,25 @@ use regex::Regex;
 use std::collections::{HashSet, VecDeque};
 use std::io::{self, Read};
 
-struct Input {
-    dots: HashSet<Dot>,
-    instructions: VecDeque<FoldingInstruction>,
-}
-
 struct Origami {
     dots: HashSet<Dot>,
     instructions: VecDeque<FoldingInstruction>,
-}
-
-impl From<&Input> for Origami {
-    fn from(input: &Input) -> Self {
-        Origami {
-            dots: input.dots.clone(),
-            instructions: input.instructions.clone(),
-        }
-    }
 }
 
 impl Origami {
     fn count_dots(&self) -> i128 {
         self.dots.len() as i128
     }
-    fn execute_instruction(&mut self) {
+    fn execute_instruction(&mut self) -> bool {
         let mut new_dots = HashSet::new();
         if let Some(instruction) = self.instructions.pop_front() {
             for dot in &self.dots {
                 new_dots.insert(instruction.fold_dot(dot));
             }
             self.dots = new_dots;
+            true
+        } else {
+            false
         }
     }
 }
@@ -99,10 +88,10 @@ impl FoldingInstruction {
     }
 }
 
-fn parse_buffer(buffer: &str) -> Result<Input> {
+fn parse_input(input: &str) -> Result<Origami> {
     let mut dots = HashSet::new();
     let mut instructions = VecDeque::new();
-    let mut lines = buffer.lines();
+    let mut lines = input.lines();
     while let Some(line) = lines.next() {
         if line == "" {
             break;
@@ -112,26 +101,25 @@ fn parse_buffer(buffer: &str) -> Result<Input> {
     while let Some(line) = lines.next() {
         instructions.push_back(FoldingInstruction::from(line));
     }
-    Ok(Input { dots, instructions })
+    Ok(Origami { dots, instructions })
 }
 
-fn part_one(input: &Input) -> Result<i128> {
-    let mut origami = Origami::from(input);
+fn part_one(input: &str) -> Result<i128> {
+    let mut origami = parse_input(input)?;
     origami.execute_instruction();
 
     Ok(origami.count_dots())
 }
 
-fn part_two(_input: &Input) -> Result<i128> {
+fn part_two(_input: &str) -> Result<i128> {
     Ok(0)
 }
 
 fn main() -> Result<()> {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer)?;
-    let input = parse_buffer(&buffer)?;
-    println!("Part one: {}", part_one(&input)?);
-    println!("Part two: {}", part_two(&input)?);
+    println!("Part one: {}", part_one(&buffer)?);
+    println!("Part two: {}", part_two(&buffer)?);
     Ok(())
 }
 
@@ -141,15 +129,13 @@ mod tests {
     use std::fs;
 
     lazy_static! {
-        static ref TEST: Input = read_from_file("test.txt");
-        static ref INPUT: Input = read_from_file("input.txt");
+        static ref TEST: String = read_from_file("test.txt");
+        static ref INPUT: String = read_from_file("input.txt");
     }
 
-    fn read_from_file(filename: &str) -> Input {
-        let buffer = fs::read_to_string(filename)
-            .unwrap_or_else(|msg| panic!("error reading {}: {}", filename, msg));
-
-        parse_buffer(&buffer).unwrap_or_else(|msg| panic!("error parsing {}: {}", filename, msg))
+    fn read_from_file(filename: &str) -> String {
+        fs::read_to_string(filename)
+            .unwrap_or_else(|msg| panic!("error reading {}: {}", filename, msg))
     }
 
     #[test]
