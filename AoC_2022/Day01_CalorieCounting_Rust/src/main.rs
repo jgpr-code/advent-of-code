@@ -1,4 +1,6 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::io::{self, Read};
 
 struct Elves {
@@ -17,14 +19,16 @@ impl Elf {
 
 fn parse_input(buffer: &str) -> Result<Elves> {
     let mut elf_vec: Vec<Elf> = Vec::new();
-    // TODO: make this robust against \n vs \r\n
-    let all_elf_calories = buffer.split("\r\n\r\n").collect::<Vec<_>>();
+    lazy_static! {
+        static ref RE: Regex = Regex::new(r"(\n|\r\n){2}").unwrap();
+    }
+    let all_elf_calories = RE.split(buffer).collect::<Vec<_>>();
 
     for elf_calories in all_elf_calories {
         let calories = elf_calories
             .lines()
             .map(|l| i128::from_str_radix(l, 10))
-            .collect::<Result<Vec<i128>, _>>()?;
+            .collect::<Result<Vec<_>, _>>()?;
         elf_vec.push(Elf { calories });
     }
 
@@ -33,9 +37,17 @@ fn parse_input(buffer: &str) -> Result<Elves> {
 
 fn part_one(input: &str) -> Result<i128> {
     let elves = parse_input(input)?;
-    let total_calories: Vec<i128> = elves.elf_vec.iter().map(|e| e.sum_calories()).collect();
-    let maximum = total_calories.iter().max().unwrap();
-    Ok(*maximum)
+    let total_calories = elves
+        .elf_vec
+        .iter()
+        .map(|e| e.sum_calories())
+        .collect::<Vec<_>>();
+
+    if let Some(&maximum) = total_calories.iter().max() {
+        Ok(maximum)
+    } else {
+        Err(anyhow!("no elements for maximum!"))
+    }
 }
 
 fn part_two(input: &str) -> Result<i128> {
@@ -57,7 +69,6 @@ fn main() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use lazy_static::lazy_static;
     use std::fs;
 
     lazy_static! {
