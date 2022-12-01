@@ -25,9 +25,26 @@ impl Origami {
             false
         }
     }
+    fn print(&self) {
+        // find maximum dot in HashSet
+        if let Some(maximum) = self.dots.iter().max() {
+            let max_x = maximum.x;
+            let max_y = maximum.y;
+            for y in 0..=max_y {
+                for x in 0..=max_x {
+                    if self.dots.contains(&Dot { x, y }) {
+                        print!("#");
+                    } else {
+                        print!(".");
+                    }
+                }
+                println!();
+            }
+        }
+    }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 struct Dot {
     x: i128,
     y: i128,
@@ -111,7 +128,10 @@ fn part_one(input: &str) -> Result<i128> {
     Ok(origami.count_dots())
 }
 
-fn part_two(_input: &str) -> Result<i128> {
+fn part_two(input: &str) -> Result<i128> {
+    let mut origami = parse_input(input)?;
+    while origami.execute_instruction() {}
+    origami.print(); // "PGHRKLKL"
     Ok(0)
 }
 
