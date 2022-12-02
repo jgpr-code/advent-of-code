@@ -20,6 +20,23 @@ fn char_to_choice(c: char) -> Choice {
     }
 }
 
+fn chars_to_choices(match_up: &(char, char)) -> (Choice, Choice) {
+    // X lose, Y draw, Z win
+    use Choice::*;
+    match match_up {
+        &('A', 'X') => (Rock, Scissor),
+        &('A', 'Y') => (Rock, Rock),
+        &('A', 'Z') => (Rock, Paper),
+        &('B', 'X') => (Paper, Rock),
+        &('B', 'Y') => (Paper, Paper),
+        &('B', 'Z') => (Paper, Scissor),
+        &('C', 'X') => (Scissor, Paper),
+        &('C', 'Y') => (Scissor, Scissor),
+        &('C', 'Z') => (Scissor, Rock),
+        _ => panic!("invalid choice"),
+    }
+}
+
 fn get_your_score(opponent: Choice, you: Choice) -> i128 {
     use Choice::*;
     let match_score = match (opponent, you) {
@@ -44,6 +61,15 @@ impl TaskData {
         self.matches
             .iter()
             .map(|m| get_your_score(char_to_choice(m.0), char_to_choice(m.1)))
+            .sum()
+    }
+    fn get_final_score_part_two(&self) -> i128 {
+        self.matches
+            .iter()
+            .map(|m| {
+                let (opponent, you) = chars_to_choices(m);
+                get_your_score(opponent, you)
+            })
             .sum()
     }
 }
@@ -73,8 +99,8 @@ fn part_one(input: &str) -> Result<i128> {
 }
 
 fn part_two(input: &str) -> Result<i128> {
-    let _ = parse_input(input)?;
-    Ok(-1)
+    let data = parse_input(input)?;
+    Ok(data.get_final_score_part_two())
 }
 
 fn main() -> Result<()> {
@@ -120,7 +146,7 @@ mod tests {
     #[test]
     fn test_two() -> Result<()> {
         let answer = super::part_two(&TEST)?;
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 12);
         Ok(())
     }
 
