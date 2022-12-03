@@ -19,8 +19,19 @@ impl Rucksack {
         let (first, second) = self.get_compartments();
         let first_set = first.iter().cloned().collect::<HashSet<_>>();
         let second_set = second.iter().cloned().collect::<HashSet<_>>();
-        let intersection: Vec<_> = first_set.intersection(&second_set).collect();
-        *intersection[0]
+        let intersection: Vec<char> = first_set.intersection(&second_set).cloned().collect();
+        intersection[0]
+    }
+    fn in_all_three(three_sacks: &[Rucksack]) -> char {
+        if three_sacks.len() != 3 {
+            panic!("in_all_three works only for exactly 3 rucksacks");
+        }
+        let first: HashSet<char> = three_sacks[0].content.iter().cloned().collect();
+        let second: HashSet<char> = three_sacks[1].content.iter().cloned().collect();
+        let third: HashSet<char> = three_sacks[2].content.iter().cloned().collect();
+        let first_second: HashSet<char> = first.intersection(&second).cloned().collect();
+        let all: Vec<char> = first_second.intersection(&third).cloned().collect();
+        all[0]
     }
 }
 
@@ -57,8 +68,13 @@ fn part_one(input: &str) -> Result<i128> {
 }
 
 fn part_two(input: &str) -> Result<i128> {
-    let _ = parse_input(input)?;
-    Ok(-1)
+    let TaskData { rucksacks } = parse_input(input)?;
+    let groups = rucksacks.chunks(3);
+    let mut priority_sum = 0;
+    for group in groups {
+        priority_sum += to_priority(Rucksack::in_all_three(group));
+    }
+    Ok(priority_sum)
 }
 
 fn main() -> Result<()> {
@@ -107,7 +123,7 @@ mod tests {
     #[test]
     fn test_two() -> Result<()> {
         let answer = super::part_two(&TEST)?;
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 70);
         Ok(())
     }
 
@@ -117,7 +133,7 @@ mod tests {
         let t = std::time::Instant::now();
         let answer = super::part_two(&INPUT)?;
         eprintln!("Part two took {:0.2?}", t.elapsed());
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 2708);
         Ok(())
     }
 }
