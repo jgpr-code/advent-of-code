@@ -6,42 +6,51 @@ struct Rucksack {
     content: Vec<char>,
 }
 
-impl Rucksack {
-    fn get_compartments(&self) -> (Vec<char>, Vec<char>) {
-        let middle = self.content.len() / 2;
-        let (first, second) = self.content.split_at(middle);
-        (
-            first.into_iter().cloned().collect::<Vec<_>>(),
-            second.into_iter().cloned().collect::<Vec<_>>(),
-        )
-    }
-    fn in_both_compartments(&self) -> char {
-        let (first, second) = self.get_compartments();
-        let first_set = first.iter().cloned().collect::<HashSet<_>>();
-        let second_set = second.iter().cloned().collect::<HashSet<_>>();
-        let intersection: Vec<char> = first_set.intersection(&second_set).cloned().collect();
-        intersection[0]
-    }
-    fn in_all_three(three_sacks: &[Rucksack]) -> char {
-        if three_sacks.len() != 3 {
-            panic!("in_all_three works only for exactly 3 rucksacks");
-        }
-        let first: HashSet<char> = three_sacks[0].content.iter().cloned().collect();
-        let second: HashSet<char> = three_sacks[1].content.iter().cloned().collect();
-        let third: HashSet<char> = three_sacks[2].content.iter().cloned().collect();
-        let first_second: HashSet<char> = first.intersection(&second).cloned().collect();
-        let all: Vec<char> = first_second.intersection(&third).cloned().collect();
-        all[0]
+impl<'a> From<&'a Rucksack> for HashSet<&'a char> {
+    fn from(sack: &'a Rucksack) -> Self {
+        sack.content.iter().collect()
     }
 }
 
-fn to_priority(c: char) -> i128 {
-    let offset = if c.is_ascii_lowercase() {
-        'a' as u8
-    } else {
-        'A' as u8 - 26
-    };
-    (c as u8 - offset + 1) as i128
+impl Rucksack {
+    fn split_sack(&self) -> [Self; 2] {
+        let middle = self.content.len() / 2;
+        let (first, second) = self.content.split_at(middle);
+        [
+            Self {
+                content: first.iter().cloned().collect(),
+            },
+            Self {
+                content: second.iter().cloned().collect(),
+            },
+        ]
+    }
+    fn intersect_sacks(sacks: &[Self]) -> HashSet<&char> {
+        let mut sacks_iter = sacks.into_iter();
+        let mut accu: HashSet<&char> = if let Some(rucksack) = sacks_iter.next() {
+            HashSet::from(rucksack)
+        } else {
+            return HashSet::new();
+        };
+        for sack in sacks_iter {
+            accu = accu.intersection(&HashSet::from(sack)).cloned().collect();
+        }
+        accu
+    }
+    fn to_priority(c: char) -> i128 {
+        let offset = if c.is_ascii_lowercase() {
+            'a' as u8
+        } else {
+            'A' as u8 - 26
+        };
+        (c as u8 - offset + 1) as i128
+    }
+    fn priority_of_sacks(sacks: &[Self]) -> i128 {
+        Self::intersect_sacks(sacks)
+            .into_iter()
+            .map(|&c| Self::to_priority(c))
+            .sum::<i128>()
+    }
 }
 
 struct TaskData {
@@ -60,26 +69,25 @@ fn parse_input(buffer: &str) -> Result<TaskData> {
 
 fn part_one(input: &str) -> Result<i128> {
     let TaskData { rucksacks } = parse_input(input)?;
-    let mut priority_sum = 0;
-    for rucksack in rucksacks.iter() {
-        priority_sum += to_priority(rucksack.in_both_compartments());
-    }
+    let priority_sum = rucksacks
+        .into_iter()
+        .map(|r| Rucksack::priority_of_sacks(&r.split_sack()))
+        .sum();
+
     Ok(priority_sum)
 }
 
 fn part_two(input: &str) -> Result<i128> {
     let TaskData { rucksacks } = parse_input(input)?;
-    let groups = rucksacks.chunks(3);
-    let mut priority_sum = 0;
-    for group in groups {
-        priority_sum += to_priority(Rucksack::in_all_three(group));
-    }
+    let priority_sum = rucksacks
+        .chunks(3)
+        .map(|c| Rucksack::priority_of_sacks(c))
+        .sum();
+
     Ok(priority_sum)
 }
 
 fn main() -> Result<()> {
-    println!("{}", to_priority('c'));
-    println!("{}", to_priority('D'));
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer)?;
     println!("Part one: {}", part_one(&buffer)?);
