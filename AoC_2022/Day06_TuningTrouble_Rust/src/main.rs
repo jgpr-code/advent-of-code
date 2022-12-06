@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use std::collections::HashSet;
 use std::io::{self, Read};
 
@@ -7,7 +7,9 @@ struct TaskData {
 }
 
 fn parse_input(input: &str) -> Result<TaskData> {
-    let signal: Vec<char> = input.lines().next().unwrap().chars().collect();
+    let first_line = input.lines().next().context("input had no lines")?;
+    let signal: Vec<char> = first_line.chars().collect();
+
     Ok(TaskData { signal })
 }
 
