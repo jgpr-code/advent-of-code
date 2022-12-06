@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use std::collections::HashSet;
 use std::io::{self, Read};
 
@@ -11,18 +11,36 @@ fn parse_input(input: &str) -> Result<TaskData> {
     Ok(TaskData { signal })
 }
 
-fn only_unique(four: &[char]) -> bool {
-    four[0] != four[1]
-        && four[0] != four[2]
-        && four[0] != four[3]
-        && four[1] != four[2]
-        && four[1] != four[3]
-        && four[2] != four[3]
+fn first_start_of_packet_marker(signal: &[char]) -> Result<usize> {
+    let marker_len = 4;
+    find_marker(marker_len, signal)
 }
 
-fn only_unique2(f: &[char]) -> bool {
+fn first_start_of_message_marker(signal: &[char]) -> Result<usize> {
+    let marker_len = 14;
+    find_marker(marker_len, signal)
+}
+
+fn find_marker(marker_len: usize, signal: &[char]) -> Result<usize> {
+    let mut found = false;
+    let mut index = marker_len;
+    for (i, cs) in signal.windows(marker_len).enumerate() {
+        if is_unique_chars(cs) {
+            index += i;
+            found = true;
+            break;
+        }
+    }
+    if found {
+        Ok(index)
+    } else {
+        Err(anyhow!("Marker not found"))
+    }
+}
+
+fn is_unique_chars(cs: &[char]) -> bool {
     let mut encountered: HashSet<char> = HashSet::new();
-    for &c in f {
+    for &c in cs {
         if encountered.contains(&c) {
             return false;
         }
@@ -31,28 +49,14 @@ fn only_unique2(f: &[char]) -> bool {
     true
 }
 
-fn part_one(input: &str) -> Result<i128> {
+fn part_one(input: &str) -> Result<usize> {
     let TaskData { signal } = parse_input(input)?;
-    let mut index = 0;
-    for (i, c) in signal.windows(4).enumerate() {
-        if only_unique(c) {
-            index = i;
-            break;
-        }
-    }
-    Ok(index as i128 + 4)
+    Ok(first_start_of_packet_marker(&signal)?)
 }
 
-fn part_two(input: &str) -> Result<i128> {
+fn part_two(input: &str) -> Result<usize> {
     let TaskData { signal } = parse_input(input)?;
-    let mut index = 0;
-    for (i, c) in signal.windows(14).enumerate() {
-        if only_unique2(c) {
-            index = i;
-            break;
-        }
-    }
-    Ok(index as i128 + 14)
+    Ok(first_start_of_message_marker(&signal)?)
 }
 
 fn main() -> Result<()> {
@@ -85,6 +89,30 @@ mod tests {
         assert_eq!(answer, 7);
         Ok(())
     }
+    #[test]
+    fn test_one_1() -> Result<()> {
+        let answer = super::part_one("bvwbjplbgvbhsrlpgdmjqwftvncz")?;
+        assert_eq!(answer, 5);
+        Ok(())
+    }
+    #[test]
+    fn test_one_2() -> Result<()> {
+        let answer = super::part_one("nppdvjthqldpwncqszvftbrmjlhg")?;
+        assert_eq!(answer, 6);
+        Ok(())
+    }
+    #[test]
+    fn test_one_3() -> Result<()> {
+        let answer = super::part_one("nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg")?;
+        assert_eq!(answer, 10);
+        Ok(())
+    }
+    #[test]
+    fn test_one_4() -> Result<()> {
+        let answer = super::part_one("zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw")?;
+        assert_eq!(answer, 11);
+        Ok(())
+    }
 
     // Use "cargo test --release -- part_one --nocapture" to print the time
     #[test]
@@ -100,6 +128,30 @@ mod tests {
     fn test_two() -> Result<()> {
         let answer = super::part_two(&TEST)?;
         assert_eq!(answer, 19);
+        Ok(())
+    }
+    #[test]
+    fn test_two_1() -> Result<()> {
+        let answer = super::part_two("bvwbjplbgvbhsrlpgdmjqwftvncz")?;
+        assert_eq!(answer, 23);
+        Ok(())
+    }
+    #[test]
+    fn test_two_2() -> Result<()> {
+        let answer = super::part_two("nppdvjthqldpwncqszvftbrmjlhg")?;
+        assert_eq!(answer, 23);
+        Ok(())
+    }
+    #[test]
+    fn test_two_3() -> Result<()> {
+        let answer = super::part_two("nznrnfrfntjfmvfwmzdfjlvtqnbhcprsg")?;
+        assert_eq!(answer, 29);
+        Ok(())
+    }
+    #[test]
+    fn test_two_4() -> Result<()> {
+        let answer = super::part_two("zcfzfwzzqfrljwzlrfnpqdbhtmscgvjw")?;
+        assert_eq!(answer, 26);
         Ok(())
     }
 
