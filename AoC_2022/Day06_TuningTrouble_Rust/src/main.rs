@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context, Result};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{self, Read};
 
 struct TaskData {
@@ -61,11 +61,82 @@ fn part_two(input: &str) -> Result<usize> {
     Ok(first_start_of_message_marker(&signal)?)
 }
 
+fn find_marker_slow(marker_len: usize, signal: &[char]) -> Result<usize> {
+    let mut found = false;
+    let mut index = marker_len;
+    for (i, cs) in signal.windows(marker_len).enumerate() {
+        if is_unique_chars_slow(cs) {
+            index += i;
+            found = true;
+            break;
+        }
+    }
+    if found {
+        Ok(index)
+    } else {
+        Err(anyhow!("Marker not found"))
+    }
+}
+
+struct FastMarkerFinder<const MARKER_LEN: usize> {
+    index: usize,
+    unique_count: usize,
+    current_chunk: VecDeque<char>,
+    encounters: HashMap<char, usize>,
+}
+// a b c a
+// count = 3
+// unique = 2
+// map {a: 2} {b: 1} {c: 1}
+//   b c a b
+// map {a: 1} {b: 2} {c: 1}
+// unique 2 count 3
+
+fn find_marker_fast(marker_len: usize, signal: &[char]) -> usize {
+    let mut sig_iter = signal.iter();
+    let foo = sig_iter.take(marker_len);
+    for f in foo {}
+    let d: VecDeque<char> = VecDeque::from_iter(foo.cloned());
+    let set: HashSet<char> = HashSet::from_iter(foo.cloned());
+    0
+}
+
+fn first_start_of_message_marker_slow(signal: &[char]) -> Result<usize> {
+    let marker_len = 14;
+    find_marker_slow(marker_len, signal)
+}
+
+fn is_unique_chars_slow(cs: &[char]) -> bool {
+    let set: HashSet<char> = HashSet::from_iter(cs.iter().cloned());
+    set.len() == cs.len()
+}
+
+fn part_two_slow(input: &str) -> Result<usize> {
+    let TaskData { signal } = parse_input(input)?;
+    Ok(first_start_of_message_marker_slow(&signal)?)
+}
+
 fn main() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
     println!("Part one: {}", part_one(&input)?);
     println!("Part two: {}", part_two(&input)?);
+
+    // worst case time test
+    let mut worst_case = vec!['a'; 10000000];
+    let mut end = vec![
+        'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+    ];
+    worst_case.append(&mut end);
+    let worst_case_str: String = worst_case.into_iter().collect();
+
+    let t = std::time::Instant::now();
+    let _ = part_two(&worst_case_str);
+    println!("Part two {:0.2?}", t.elapsed());
+
+    let t = std::time::Instant::now();
+    let _ = part_two_slow(&worst_case_str);
+    println!("Part two slow {:0.2?}", t.elapsed());
     Ok(())
 }
 
@@ -157,12 +228,20 @@ mod tests {
         Ok(())
     }
 
-    // Use "cargo test --release -- part_two --nocapture" to print the time
+    // Use "cargo test --release part_two -- --nocapture" to print the time
     #[test]
     fn part_two() -> Result<()> {
         let t = std::time::Instant::now();
         let answer = super::part_two(&INPUT)?;
         eprintln!("Part two took {:0.2?}", t.elapsed());
+        assert_eq!(answer, 3120);
+        Ok(())
+    }
+    #[test]
+    fn part_two_slow() -> Result<()> {
+        let t = std::time::Instant::now();
+        let answer = super::part_two_slow(&INPUT)?;
+        eprintln!("Part two slow took {:0.2?}", t.elapsed());
         assert_eq!(answer, 3120);
         Ok(())
     }
