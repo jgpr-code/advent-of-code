@@ -15,6 +15,74 @@ fn max(a: i128, b: i128) -> i128 {
 }
 
 impl TaskData {
+    fn get_scenic_score(&self, treehouse_row: usize, treehouse_col: usize) -> i128 {
+        let rows = self.tree_grid.len();
+        let cols = self.tree_grid[0].len();
+        let treehouse_height = self.tree_grid[treehouse_row][treehouse_col];
+
+        let mut up = 0;
+        for row in (0..treehouse_row).rev() {
+            let current_tree = self.tree_grid[row][treehouse_col];
+            if current_tree < treehouse_height {
+                up += 1;
+            }
+            if current_tree >= treehouse_height {
+                up += 1;
+                break;
+            }
+        }
+        let mut down = 0;
+        for row in treehouse_row + 1..rows {
+            let current_tree = self.tree_grid[row][treehouse_col];
+            if current_tree < treehouse_height {
+                down += 1;
+            }
+            if current_tree >= treehouse_height {
+                down += 1;
+                break;
+            }
+        }
+        let mut left = 0;
+        for col in (0..treehouse_col).rev() {
+            let current_tree = self.tree_grid[treehouse_row][col];
+            if current_tree < treehouse_height {
+                left += 1;
+            }
+            if current_tree >= treehouse_height {
+                left += 1;
+                break;
+            }
+        }
+        let mut right = 0;
+        for col in treehouse_col + 1..cols {
+            let current_tree = self.tree_grid[treehouse_row][col];
+            if current_tree < treehouse_height {
+                right += 1;
+            }
+            if current_tree >= treehouse_height {
+                right += 1;
+                break;
+            }
+        }
+        // println!("(row,col) = (up,down,left,right)");
+        // println!(
+        //     "({},{}) = ({},{},{},{})",
+        //     treehouse_row, treehouse_col, up, down, left, right
+        // );
+        up * down * left * right
+    }
+    fn best_scenic_score(&self) -> i128 {
+        let rows = self.tree_grid.len();
+        let cols = self.tree_grid[0].len();
+        let mut best_score = -1;
+        for row in 1..rows - 1 {
+            for col in 1..cols - 1 {
+                best_score = max(best_score, self.get_scenic_score(row, col))
+            }
+        }
+        best_score
+    }
+
     fn count_visible(&self) -> i128 {
         let rows = self.tree_grid.len();
         let cols = self.tree_grid[0].len();
@@ -110,14 +178,11 @@ fn part_one(input: &str) -> Result<i128> {
 }
 
 fn part_two(input: &str) -> Result<i128> {
-    let _ = parse_input(input)?;
-    Ok(-1)
+    let data = parse_input(input)?;
+    Ok(data.best_scenic_score())
 }
 
 fn main() -> Result<()> {
-    for i in (0..10).rev() {
-        println!("{}", i);
-    }
     println!("{}", part_one("00000\n00300\n00000")?);
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
@@ -145,7 +210,7 @@ mod tests {
     #[test]
     fn test_one() -> Result<()> {
         let answer = super::part_one(&TEST)?;
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 21);
         Ok(())
     }
 
@@ -155,7 +220,7 @@ mod tests {
         let t = std::time::Instant::now();
         let answer = super::part_one(&INPUT)?;
         eprintln!("Part one took {:0.2?}", t.elapsed());
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 1690);
         Ok(())
     }
 
