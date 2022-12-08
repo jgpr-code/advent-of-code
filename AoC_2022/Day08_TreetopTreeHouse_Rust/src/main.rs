@@ -4,6 +4,25 @@ use std::io::{self, Read};
 
 struct TaskData {
     tree_grid: Vec<Vec<i128>>,
+    rows: usize,
+    cols: usize,
+}
+
+enum Direction {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
+impl Direction {
+    fn to_row_col(&self, xy: (usize, usize)) -> (usize, usize) {
+        let (x, y) = xy;
+        match self {
+            Direction::Up | Direction::Down => (y, x),
+            Direction::Left | Direction::Right => (x, y),
+        }
+    }
 }
 
 fn max(a: i128, b: i128) -> i128 {
@@ -15,147 +34,90 @@ fn max(a: i128, b: i128) -> i128 {
 }
 
 impl TaskData {
-    fn get_scenic_score(&self, treehouse_row: usize, treehouse_col: usize) -> i128 {
-        let rows = self.tree_grid.len();
-        let cols = self.tree_grid[0].len();
+    fn count_visible_from_treehouse_in_direction(
+        &self,
+        treehouse: (usize, usize),
+        direction: Direction,
+    ) -> i128 {
+        use Direction::*;
+        let (treehouse_row, treehouse_col) = treehouse;
         let treehouse_height = self.tree_grid[treehouse_row][treehouse_col];
-
-        let mut up = 0;
-        for row in (0..treehouse_row).rev() {
-            let current_tree = self.tree_grid[row][treehouse_col];
-            if current_tree < treehouse_height {
-                up += 1;
-            }
+        let range_vec: Vec<usize> = match direction {
+            Up => (0..treehouse_row).rev().collect(),
+            Down => (treehouse_row + 1..self.rows).collect(),
+            Left => ((0..treehouse_col).rev()).collect(),
+            Right => (treehouse_col + 1..self.cols).collect(),
+        };
+        let mut visible_trees = 0;
+        for i in range_vec.into_iter() {
+            let index = match direction {
+                Up | Down => (i, treehouse_col),
+                Left | Right => (treehouse_row, i),
+            };
+            let current_tree = self.tree_grid[index.0][index.1];
+            visible_trees += 1;
             if current_tree >= treehouse_height {
-                up += 1;
                 break;
             }
         }
-        let mut down = 0;
-        for row in treehouse_row + 1..rows {
-            let current_tree = self.tree_grid[row][treehouse_col];
-            if current_tree < treehouse_height {
-                down += 1;
-            }
-            if current_tree >= treehouse_height {
-                down += 1;
-                break;
-            }
-        }
-        let mut left = 0;
-        for col in (0..treehouse_col).rev() {
-            let current_tree = self.tree_grid[treehouse_row][col];
-            if current_tree < treehouse_height {
-                left += 1;
-            }
-            if current_tree >= treehouse_height {
-                left += 1;
-                break;
-            }
-        }
-        let mut right = 0;
-        for col in treehouse_col + 1..cols {
-            let current_tree = self.tree_grid[treehouse_row][col];
-            if current_tree < treehouse_height {
-                right += 1;
-            }
-            if current_tree >= treehouse_height {
-                right += 1;
-                break;
-            }
-        }
-        // println!("(row,col) = (up,down,left,right)");
-        // println!(
-        //     "({},{}) = ({},{},{},{})",
-        //     treehouse_row, treehouse_col, up, down, left, right
-        // );
+        visible_trees
+    }
+    fn get_scenic_score(&self, treehouse: (usize, usize)) -> i128 {
+        use Direction::*;
+        let up = self.count_visible_from_treehouse_in_direction(treehouse, Up);
+        let down = self.count_visible_from_treehouse_in_direction(treehouse, Down);
+        let left = self.count_visible_from_treehouse_in_direction(treehouse, Left);
+        let right = self.count_visible_from_treehouse_in_direction(treehouse, Right);
         up * down * left * right
     }
     fn best_scenic_score(&self) -> i128 {
-        let rows = self.tree_grid.len();
-        let cols = self.tree_grid[0].len();
         let mut best_score = -1;
-        for row in 1..rows - 1 {
-            for col in 1..cols - 1 {
-                best_score = max(best_score, self.get_scenic_score(row, col))
+        for row in 1..self.rows - 1 {
+            for col in 1..self.cols - 1 {
+                best_score = max(best_score, self.get_scenic_score((row, col)));
             }
         }
         best_score
     }
 
-    fn count_visible(&self) -> i128 {
-        let rows = self.tree_grid.len();
-        let cols = self.tree_grid[0].len();
+    fn count_visible_from_direction(
+        &self,
+        direction: Direction,
+        counted: &mut HashSet<(usize, usize)>,
+        outer_iter: impl Iterator<Item = usize>,
+        inner_iter: impl Iterator<Item = usize> + Clone,
+    ) -> i128 {
+        let mut total = 0;
+        for x in outer_iter {
+            let mut min_size = -1;
+            for y in inner_iter.clone() {
+                let (row, col) = direction.to_row_col((x, y));
+                let current_tree = self.tree_grid[row][col];
+                if counted.contains(&(row, col)) {
+                    min_size = max(min_size, current_tree); // tree can be smaller!
+                    continue;
+                }
+                if current_tree > min_size {
+                    min_size = current_tree;
+                    counted.insert((row, col));
+                    total += 1;
+                }
+            }
+        }
+        total
+    }
+
+    fn count_visible_from_borders(&self) -> i128 {
+        let (rows, cols) = (self.rows, self.cols);
+
         // count from each side, don't count twice
         let mut counted: HashSet<(usize, usize)> = HashSet::new();
         let mut total = 0;
-        // top
-        for col in 0..cols {
-            let mut min_size = -1;
-            for row in 0..rows {
-                // already found largest tree
-                if counted.contains(&(row, col)) {
-                    min_size = max(min_size, self.tree_grid[row][col]);
-                    continue;
-                }
-                if self.tree_grid[row][col] > min_size {
-                    total += 1;
-                    min_size = max(min_size, self.tree_grid[row][col]);
-                    counted.insert((row, col));
-                }
-            }
-        }
-        // bottom
-        for col in 0..cols {
-            let mut min_size = -1;
-            for row in (0..rows).rev() {
-                // already found largest tree
-                if counted.contains(&(row, col)) {
-                    min_size = max(min_size, self.tree_grid[row][col]);
-                    continue;
-                }
-                if self.tree_grid[row][col] > min_size {
-                    total += 1;
-                    min_size = max(min_size, self.tree_grid[row][col]);
-                    counted.insert((row, col));
-                }
-            }
-        }
-        // left
-        for row in 0..rows {
-            let mut min_size = -1;
-            for col in 0..cols {
-                if counted.contains(&(row, col)) {
-                    min_size = max(min_size, self.tree_grid[row][col]);
-                    continue;
-                }
-                if self.tree_grid[row][col] > min_size {
-                    total += 1;
-                    min_size = max(min_size, self.tree_grid[row][col]);
-                    counted.insert((row, col));
-                }
-            }
-        }
-        // right
-        for row in 0..rows {
-            let mut min_size = -1;
-            for col in (0..cols).rev() {
-                if counted.contains(&(row, col)) {
-                    min_size = max(min_size, self.tree_grid[row][col]);
-                    continue;
-                }
-                if self.tree_grid[row][col] > min_size {
-                    total += 1;
-                    min_size = max(min_size, self.tree_grid[row][col]);
-                    counted.insert((row, col));
-                }
-            }
-        }
-        let debug: Vec<(usize, usize)> = counted
-            .into_iter()
-            .filter(|&(a, b)| a != 0 && a != rows - 1 && b != 0 && b != cols - 1)
-            .collect();
-        println!("{:?}", debug);
+        use Direction::*;
+        total += self.count_visible_from_direction(Up, &mut counted, 0..cols, 0..rows);
+        total += self.count_visible_from_direction(Down, &mut counted, 0..cols, (0..rows).rev());
+        total += self.count_visible_from_direction(Left, &mut counted, 0..rows, 0..cols);
+        total += self.count_visible_from_direction(Right, &mut counted, 0..rows, (0..cols).rev());
         total
     }
 }
@@ -169,12 +131,18 @@ fn parse_input(input: &str) -> Result<TaskData> {
             .collect();
         tree_grid.push(line_heights);
     }
-    Ok(TaskData { tree_grid })
+    let rows = tree_grid.len();
+    let cols = tree_grid[0].len();
+    Ok(TaskData {
+        tree_grid,
+        rows,
+        cols,
+    })
 }
 
 fn part_one(input: &str) -> Result<i128> {
     let data = parse_input(input)?;
-    Ok(data.count_visible())
+    Ok(data.count_visible_from_borders())
 }
 
 fn part_two(input: &str) -> Result<i128> {
@@ -183,7 +151,6 @@ fn part_two(input: &str) -> Result<i128> {
 }
 
 fn main() -> Result<()> {
-    println!("{}", part_one("00000\n00300\n00000")?);
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
     println!("Part one: {}", part_one(&input)?);
@@ -227,7 +194,7 @@ mod tests {
     #[test]
     fn test_two() -> Result<()> {
         let answer = super::part_two(&TEST)?;
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 8);
         Ok(())
     }
 
@@ -237,7 +204,7 @@ mod tests {
         let t = std::time::Instant::now();
         let answer = super::part_two(&INPUT)?;
         eprintln!("Part two took {:0.2?}", t.elapsed());
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 535680);
         Ok(())
     }
 }
