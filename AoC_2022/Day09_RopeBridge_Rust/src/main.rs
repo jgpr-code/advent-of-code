@@ -29,22 +29,28 @@ impl From<&str> for RopeMove {
 
 struct TaskData {
     rope_moves: Vec<RopeMove>,
-    head_pos: (i128, i128),
-    tail_pos: (i128, i128),
+    rope_knots: Vec<(i128, i128)>,
     set_tail_pos: HashSet<(i128, i128)>,
 }
 
 impl TaskData {
     fn print_debug(&self) {
-        println!("({}, {})", self.head_pos.0, self.head_pos.1);
-        println!("({}, {})", self.tail_pos.0, self.tail_pos.1);
+        println!("{:?}", self.rope_knots);
         for y in -7..=0 {
             for x in 0..=7 {
-                if self.head_pos == (x, y) {
-                    print!("H");
-                } else if self.tail_pos == (x, y) {
-                    print!("T");
-                } else {
+                let mut found = false;
+                for (i, pos) in self.rope_knots.iter().enumerate() {
+                    if pos == &(x, y) {
+                        if i == 0 {
+                            print!("H");
+                        } else {
+                            print!("{}", i);
+                        }
+                        found = true;
+                        break;
+                    }
+                }
+                if !found {
                     print!(".");
                 }
             }
@@ -56,22 +62,22 @@ impl TaskData {
         self.set_tail_pos.len() as i128
     }
 
-    fn come_closer(pos: i128, target_pos: i128) -> i128 {
-        if pos < target_pos + 1 {
-            pos + 1
-        } else if target_pos - 1 < pos {
-            pos - 1
-        } else {
-            pos
+    fn setup_knots(&mut self, amount: i128) {
+        for _ in 0..amount {
+            self.rope_knots.push((0, 0));
         }
     }
 
-    fn update_tail(&mut self) {
-        let (hx, hy) = self.head_pos;
-        let (tx, ty) = self.tail_pos;
+    fn update_knot(current: (i128, i128), target: (i128, i128)) -> (i128, i128) {
+        let (hx, hy) = target;
+        let (tx, ty) = current;
         let (dx, dy) = (hx - tx, hy - ty);
 
-        let new_tail = match (dx, dy) {
+        match (dx, dy) {
+            (x, y) if x > 1 && y > 1 => (tx + 1, ty + 1),
+            (x, y) if x < -1 && y > 1 => (tx - 1, ty + 1),
+            (x, y) if x > 1 && y < -1 => (tx + 1, ty - 1),
+            (x, y) if x < -1 && y < -1 => (tx - 1, ty - 1),
             (x, y) if x > 1 && y.abs() > 0 => (tx + 1, hy), //diagonal movement in x
             (x, y) if x < -1 && y.abs() > 0 => (tx - 1, hy),
             (x, y) if y > 1 && x.abs() > 0 => (hx, ty + 1), //diagonal movement in y
@@ -81,34 +87,19 @@ impl TaskData {
             (0, y) if y > 1 => (tx, ty + 1),
             (0, y) if y < -1 => (tx, ty - 1),
             _ => (tx, ty),
-        };
-        // // allow distance of 1
-        // if dx.abs() <= 1 && dy.abs() <= 1 {
-        //     return;
-        // }
-        // // adapt x
-        // //   T H -> hx - tx > 1 => tx+1
-        // // H T -> hx - tx < -1 => tx-1
-        // if dx.abs() > 2 || dy.abs() > 2 {
-        //     panic!("assumptions don't hold")
-        // }
-        // let mut new_tx = tx;
-        // let mut new_ty = ty;
-        // if dx > 1 {
-        //     new_tx += 1;
-        // } else if dx < -1 {
-        //     new_tx -= 1;
-        // }
-        // // T
+        }
+    }
 
-        // // H  -> hy - ty > 1 => ty + 1
-        // if dy > 1 {
-        //     new_ty += 1;
-        // } else if dy < -1 {
-        //     new_ty -= 1;
-        // }
-        self.tail_pos = new_tail;
-        self.set_tail_pos.insert(self.tail_pos);
+    fn update_tail(&mut self) {
+        let last_i = self.rope_knots.len() - 1;
+        for i in 1..=last_i {
+            let target = self.rope_knots[i - 1];
+            let current = self.rope_knots[i];
+            self.rope_knots[i] = Self::update_knot(current, target);
+            if i == last_i {
+                self.set_tail_pos.insert(self.rope_knots[i]);
+            }
+        }
     }
     // -1 x 1
     // -1
@@ -117,9 +108,12 @@ impl TaskData {
     fn go(&mut self, amount: i128, dx: i128, dy: i128) {
         for _ in 0..amount {
             //self.print_debug();
-            self.head_pos = (self.head_pos.0 + dx, self.head_pos.1 + dy);
+            let head_pos = self.rope_knots[0];
+            self.rope_knots[0] = (head_pos.0 + dx, head_pos.1 + dy);
             self.update_tail();
         }
+        //println!("after go:");
+        //self.print_debug();
     }
     fn execute_move(&mut self, rope_move: &RopeMove) {
         use RopeMove::*;
@@ -140,27 +134,28 @@ impl TaskData {
 
 fn parse_input(input: &str) -> Result<TaskData> {
     let rope_moves: Vec<RopeMove> = input.lines().map(|l| RopeMove::from(l)).collect();
-    let head_pos = (0, 0);
-    let tail_pos = head_pos;
     let mut set_tail_pos: HashSet<(i128, i128)> = HashSet::new();
+    let rope_knots = Vec::new();
     set_tail_pos.insert((0, 0));
     Ok(TaskData {
         rope_moves,
-        head_pos,
-        tail_pos,
+        rope_knots,
         set_tail_pos,
     })
 }
 
 fn part_one(input: &str) -> Result<i128> {
     let mut data = parse_input(input)?;
+    data.setup_knots(2);
     data.execute_all();
     Ok(data.count_tail_pos())
 }
 
 fn part_two(input: &str) -> Result<i128> {
-    let _ = parse_input(input)?;
-    Ok(-1)
+    let mut data = parse_input(input)?;
+    data.setup_knots(10);
+    data.execute_all();
+    Ok(data.count_tail_pos())
 }
 
 fn main() -> Result<()> {
