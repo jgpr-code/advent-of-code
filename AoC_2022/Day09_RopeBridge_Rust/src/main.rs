@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::cmp;
 use std::collections::HashSet;
 use std::io::{self, Read};
 
@@ -31,33 +32,66 @@ struct TaskData {
     rope_moves: Vec<RopeMove>,
     rope_knots: Vec<(i128, i128)>,
     set_tail_pos: HashSet<(i128, i128)>,
+    print_debug: bool,
+    global_min: (i128, i128),
+    global_max: (i128, i128),
 }
 
 impl TaskData {
-    fn print_debug(&self) {
+    fn min_pair(a: &(i128, i128), b: &(i128, i128)) -> (i128, i128) {
+        let x = cmp::min(a.0, b.0);
+        let y = cmp::min(a.1, b.1);
+        (x, y)
+    }
+    fn max_pair(a: &(i128, i128), b: &(i128, i128)) -> (i128, i128) {
+        let x = cmp::max(a.0, b.0);
+        let y = cmp::max(a.1, b.1);
+        (x, y)
+    }
+    fn print_debug(&mut self) {
+        if !self.print_debug {
+            return;
+        }
+        let mut min_pos = (i128::MAX, i128::MAX);
+        let mut max_pos = (i128::MIN, i128::MIN);
+        for p in self.rope_knots.iter() {
+            min_pos = Self::min_pair(&min_pos, p);
+            max_pos = Self::max_pair(&max_pos, p);
+        }
+        self.global_min = Self::min_pair(&self.global_min, &min_pos);
+        self.global_max = Self::max_pair(&self.global_max, &max_pos);
+        println!("{:?}", self.global_min);
+        println!("{:?}", self.global_max);
         println!("{:?}", self.rope_knots);
-        for y in -7..=0 {
-            for x in 0..=7 {
+        for y in self.global_min.1..=self.global_max.1 {
+            for x in self.global_min.0..=self.global_max.0 {
                 let mut found = false;
                 for (i, pos) in self.rope_knots.iter().enumerate() {
                     if pos == &(x, y) {
                         if i == 0 {
                             print!("H");
                         } else {
-                            print!("{}", i);
+                            print!("{i}");
                         }
                         found = true;
                         break;
                     }
                 }
                 if !found {
-                    print!(".");
+                    if (x, y) == (0, 0) {
+                        print!("s");
+                    } else if self.set_tail_pos.contains(&(x, y)) {
+                        print!("#");
+                    } else {
+                        print!(".");
+                    }
                 }
             }
             println!("");
         }
         println!("")
     }
+
     fn count_tail_pos(&self) -> i128 {
         self.set_tail_pos.len() as i128
     }
@@ -107,13 +141,11 @@ impl TaskData {
     //  1
     fn go(&mut self, amount: i128, dx: i128, dy: i128) {
         for _ in 0..amount {
-            //self.print_debug();
             let head_pos = self.rope_knots[0];
             self.rope_knots[0] = (head_pos.0 + dx, head_pos.1 + dy);
             self.update_tail();
+            self.print_debug();
         }
-        //println!("after go:");
-        //self.print_debug();
     }
     fn execute_move(&mut self, rope_move: &RopeMove) {
         use RopeMove::*;
@@ -125,6 +157,7 @@ impl TaskData {
         }
     }
     fn execute_all(&mut self) {
+        self.print_debug();
         let rope_moves = self.rope_moves.clone();
         for rope_move in rope_moves.iter() {
             self.execute_move(&rope_move);
@@ -141,6 +174,9 @@ fn parse_input(input: &str) -> Result<TaskData> {
         rope_moves,
         rope_knots,
         set_tail_pos,
+        print_debug: true,
+        global_min: (0, 0),
+        global_max: (0, 0),
     })
 }
 
