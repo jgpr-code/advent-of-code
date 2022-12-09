@@ -49,9 +49,6 @@ impl TaskData {
         (x, y)
     }
     fn print_debug(&mut self) {
-        if !self.print_debug {
-            return;
-        }
         let mut min_pos = (i128::MAX, i128::MAX);
         let mut max_pos = (i128::MIN, i128::MIN);
         for p in self.rope_knots.iter() {
@@ -60,6 +57,9 @@ impl TaskData {
         }
         self.global_min = Self::min_pair(&self.global_min, &min_pos);
         self.global_max = Self::max_pair(&self.global_max, &max_pos);
+        if !self.print_debug {
+            return;
+        }
         println!("{:?}", self.global_min);
         println!("{:?}", self.global_max);
         println!("{:?}", self.rope_knots);
@@ -174,7 +174,7 @@ fn parse_input(input: &str) -> Result<TaskData> {
         rope_moves,
         rope_knots,
         set_tail_pos,
-        print_debug: true,
+        print_debug: false,
         global_min: (0, 0),
         global_max: (0, 0),
     })
@@ -184,6 +184,8 @@ fn part_one(input: &str) -> Result<i128> {
     let mut data = parse_input(input)?;
     data.setup_knots(2);
     data.execute_all();
+    data.print_debug = true;
+    data.print_debug();
     Ok(data.count_tail_pos())
 }
 
@@ -191,6 +193,8 @@ fn part_two(input: &str) -> Result<i128> {
     let mut data = parse_input(input)?;
     data.setup_knots(10);
     data.execute_all();
+    data.print_debug = true;
+    data.print_debug();
     Ok(data.count_tail_pos())
 }
 
