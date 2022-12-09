@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::cmp;
 use std::collections::HashSet;
 use std::io::{self, Read};
 
@@ -22,14 +23,6 @@ impl Direction {
             Direction::Up | Direction::Down => (y, x),
             Direction::Left | Direction::Right => (x, y),
         }
-    }
-}
-
-fn max(a: i128, b: i128) -> i128 {
-    if a > b {
-        a
-    } else {
-        b
     }
 }
 
@@ -74,7 +67,7 @@ impl TaskData {
         let mut best_score = -1;
         for row in 1..self.rows - 1 {
             for col in 1..self.cols - 1 {
-                best_score = max(best_score, self.get_scenic_score((row, col)));
+                best_score = cmp::max(best_score, self.get_scenic_score((row, col)));
             }
         }
         best_score
@@ -94,7 +87,7 @@ impl TaskData {
                 let (row, col) = direction.to_row_col((x, y));
                 let current_tree = self.tree_grid[row][col];
                 if counted.contains(&(row, col)) {
-                    min_size = max(min_size, current_tree); // tree can be smaller!
+                    min_size = cmp::max(min_size, current_tree); // tree can be smaller!
                     continue;
                 }
                 if current_tree > min_size {
