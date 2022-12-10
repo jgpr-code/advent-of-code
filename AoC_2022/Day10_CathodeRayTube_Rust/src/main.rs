@@ -39,6 +39,7 @@ struct TaskData {
     current_x: i128,
     instructions: Vec<Instruction>,
     target_x: Vec<i128>, // 20 60 100 140 180 220 cycles
+    render_pos: i128,
 }
 
 impl TaskData {
@@ -70,6 +71,18 @@ impl TaskData {
         if cond {
             self.target_x.push(self.current_x * i);
         }
+        for _ in self.completed_cycles..new_completed_cycles {
+            if (self.render_pos - self.current_x).abs() <= 1 {
+                print!("#");
+            } else {
+                print!(".");
+            }
+            self.render_pos += 1;
+            if self.render_pos % 40 == 0 {
+                println!("");
+                self.render_pos = 0;
+            }
+        }
         self.current_x = instruction.modify(self.current_x);
         self.completed_cycles = new_completed_cycles;
         // println!("after cycles: {}", self.completed_cycles);
@@ -90,6 +103,7 @@ fn parse_input(input: &str) -> Result<TaskData> {
         current_x: 1,
         instructions,
         target_x: Vec::new(),
+        render_pos: 0,
     })
 }
 
