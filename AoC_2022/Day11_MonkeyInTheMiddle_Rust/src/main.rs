@@ -100,13 +100,15 @@ struct TaskData {
 }
 
 impl TaskData {
-    fn inspect_items_until_rounds(&mut self, rounds: usize) {
+    fn inspect_items_until_rounds(&mut self, rounds: usize, part2: bool) {
         loop {
             let current = self.current_monkey;
             while let Some(item) = self.monkeys[current].items.pop_front() {
                 let func = self.monkeys[current].worry_fn.as_ref();
-                //let new_worry = func(item);
-                let new_worry = func(item) / 3;
+                let mut new_worry = func(item);
+                if !part2 {
+                    new_worry /= 3;
+                }
                 let throw_to = if new_worry % self.monkeys[current].divisor_for_test == 0 {
                     self.monkeys[current].throw_true
                 } else {
@@ -142,7 +144,7 @@ fn part_one(input: &str) -> Result<i128> {
         m.print();
         println!("");
     }
-    data.inspect_items_until_rounds(20);
+    data.inspect_items_until_rounds(20, false);
     let mut r: Vec<i128> = data.monkeys.iter().map(|m| m.inspection_count).collect();
     r.sort_by(|a, b| b.cmp(a));
     println!("{:?}", r);
@@ -155,7 +157,7 @@ fn part_two(input: &str) -> Result<i128> {
         m.print();
         println!("");
     }
-    data.inspect_items_until_rounds(10000);
+    data.inspect_items_until_rounds(10000, true);
     let mut r: Vec<i128> = data.monkeys.iter().map(|m| m.inspection_count).collect();
     r.sort_by(|a, b| b.cmp(a));
     println!("{:?}", r);
