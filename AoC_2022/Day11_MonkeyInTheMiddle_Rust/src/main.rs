@@ -2,7 +2,6 @@ use anyhow::Result;
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::VecDeque;
-use std::fmt::Debug;
 use std::io::{self, Read};
 
 struct Monkey {
@@ -14,9 +13,6 @@ struct Monkey {
     throw_false: usize,
     inspection_count: i128,
 }
-
-// idea instead of nums keep the set of prime_factors!
-// how to handle plus then
 
 impl Monkey {
     fn print(&self) {
@@ -103,23 +99,23 @@ struct TaskData {
 }
 
 impl TaskData {
+    fn get_worry_modulus(&self) -> i128 {
+        self.monkeys.iter().map(|m| m.divisor_for_test).product()
+    }
     fn inspect_items_until_rounds(&mut self, rounds: usize, part2: bool) {
+        let worry_modulus = self.get_worry_modulus();
         loop {
             let current = self.current_monkey;
             while let Some(item) = self.monkeys[current].items.pop_front() {
                 let func = self.monkeys[current].worry_fn.as_ref();
                 let mut new_worry = func(item);
                 if part2 {
-                    let module = 11 * 2 * 5 * 17 * 19 * 7 * 3 * 13;
-                    new_worry %= module; // multiplied the divtests together manually
+                    new_worry %= worry_modulus; // multiplied the divtests together manually
                 } else {
                     new_worry /= 3;
                 }
 
                 let throw_to = if new_worry % self.monkeys[current].divisor_for_test == 0 {
-                    // if part2 {
-                    //     new_worry /= self.monkeys[current].divisor_for_test;
-                    // }
                     self.monkeys[current].throw_true
                 } else {
                     self.monkeys[current].throw_false
@@ -228,7 +224,7 @@ mod tests {
         let t = std::time::Instant::now();
         let answer = super::part_two(&INPUT)?;
         eprintln!("Part two took {:0.2?}", t.elapsed());
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 39109444654);
         Ok(())
     }
 }
