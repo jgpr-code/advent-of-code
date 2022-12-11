@@ -15,6 +15,9 @@ struct Monkey {
     inspection_count: i128,
 }
 
+// idea instead of nums keep the set of prime_factors!
+// how to handle plus then
+
 impl Monkey {
     fn print(&self) {
         println!("Monkey: {}", self.num);
@@ -106,10 +109,17 @@ impl TaskData {
             while let Some(item) = self.monkeys[current].items.pop_front() {
                 let func = self.monkeys[current].worry_fn.as_ref();
                 let mut new_worry = func(item);
-                if !part2 {
+                if part2 {
+                    let module = 11 * 2 * 5 * 17 * 19 * 7 * 3 * 13;
+                    new_worry %= module; // multiplied the divtests together manually
+                } else {
                     new_worry /= 3;
                 }
+
                 let throw_to = if new_worry % self.monkeys[current].divisor_for_test == 0 {
+                    // if part2 {
+                    //     new_worry /= self.monkeys[current].divisor_for_test;
+                    // }
                     self.monkeys[current].throw_true
                 } else {
                     self.monkeys[current].throw_false
