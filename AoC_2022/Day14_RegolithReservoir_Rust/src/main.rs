@@ -166,7 +166,7 @@ mod tests {
     #[test]
     fn test_one() -> Result<()> {
         let answer = super::part_one(&TEST)?;
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 24);
         Ok(())
     }
 
@@ -176,14 +176,14 @@ mod tests {
         let t = std::time::Instant::now();
         let answer = super::part_one(&INPUT)?;
         eprintln!("Part one took {:0.2?}", t.elapsed());
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 892);
         Ok(())
     }
 
     #[test]
     fn test_two() -> Result<()> {
         let answer = super::part_two(&TEST)?;
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 93);
         Ok(())
     }
 
@@ -193,7 +193,7 @@ mod tests {
         let t = std::time::Instant::now();
         let answer = super::part_two(&INPUT)?;
         eprintln!("Part two took {:0.2?}", t.elapsed());
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 27155);
         Ok(())
     }
 }
