@@ -72,7 +72,7 @@ impl TaskData {
         }
         100000
     }
-    fn min_best_from_AorS(&mut self) -> i128 {
+    fn min_best_from_a_or_s(&mut self) -> i128 {
         let mut global_min = 10000;
         let (sr, sc) = self.start;
         self.field[sr][sc] = 'a';
@@ -127,7 +127,7 @@ fn part_one(input: &str) -> Result<i128> {
 fn part_two(input: &str) -> Result<i128> {
     let mut data = parse_input(input)?;
 
-    Ok(data.min_best_from_AorS())
+    Ok(data.min_best_from_a_or_s())
 }
 
 fn main() -> Result<()> {
