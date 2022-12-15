@@ -61,22 +61,23 @@ impl Sensor {
         let distance_to_position: i128 = Self::distance(self.position, position);
         (distance_to_position <= distance_to_closest, next)
     }
-    fn mark_grid(&self, grid: &mut HashMap<(i128, i128), char>) {
-        let (pos_x, pos_y) = self.position;
-        let delta = self.distance_to_closest();
-        for x in pos_x - delta..=pos_x + delta {
-            for y in pos_y - delta..=pos_y + delta {
-                if !self.in_closest_beacon_range((x, y)) {
-                    continue;
-                }
-                if !grid.contains_key(&(x, y)) {
-                    grid.insert((x, y), '#');
-                }
-            }
-        }
-        grid.insert(self.position, 'S');
-        grid.insert(self.closest_beacon, 'B');
-    }
+    // brute force marking was too slow!
+    // fn mark_grid(&self, grid: &mut HashMap<(i128, i128), char>) {
+    //     let (pos_x, pos_y) = self.position;
+    //     let delta = self.distance_to_closest();
+    //     for x in pos_x - delta..=pos_x + delta {
+    //         for y in pos_y - delta..=pos_y + delta {
+    //             if !self.in_closest_beacon_range((x, y)) {
+    //                 continue;
+    //             }
+    //             if !grid.contains_key(&(x, y)) {
+    //                 grid.insert((x, y), '#');
+    //             }
+    //         }
+    //     }
+    //     grid.insert(self.position, 'S');
+    //     grid.insert(self.closest_beacon, 'B');
+    // }
     fn mark_grid_only_relevant(&self, y: i128, grid: &mut HashMap<(i128, i128), char>) {
         let (pos_x, _pos_y) = self.position;
         let delta = self.distance_to_closest();
@@ -129,8 +130,8 @@ impl TaskData {
             .count() as i128
     }
 
-    fn is_in_range_of_any(&self) -> (i128, i128) {
-        let max = 4000000;
+    fn find(&self, max: i128) -> (i128, i128) {
+        // let max = 4000000;
         //let max = 20;
         for y in 0..=max {
             let mut x = 0;
@@ -162,24 +163,26 @@ fn parse_input(input: &str) -> Result<TaskData> {
     Ok(TaskData { sensors, grid })
 }
 
-fn part_one(input: &str) -> Result<i128> {
+static PART_ONE_Y: i128 = 2000000;
+fn part_one(input: &str, y: i128) -> Result<i128> {
     let mut data = parse_input(input)?;
     // let y = 2000000;
-    let y = 10;
+    // let y = 10;
     Ok(data.check_row_y(y))
 }
 
-fn part_two(input: &str) -> Result<i128> {
+static PART_TWO_MAX: i128 = 4000000;
+fn part_two(input: &str, max: i128) -> Result<i128> {
     let data = parse_input(input)?;
-    let (x, y) = data.is_in_range_of_any();
+    let (x, y) = data.find(max);
     Ok(x * 4000000 + y)
 }
 
 fn main() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
-    println!("Part one: {}", part_one(&input)?);
-    println!("Part two: {}", part_two(&input)?);
+    println!("Part one: {}", part_one(&input, PART_ONE_Y)?);
+    println!("Part two: {}", part_two(&input, PART_TWO_MAX)?);
     Ok(())
 }
 
@@ -199,10 +202,11 @@ mod tests {
             .unwrap_or_else(|msg| panic!("error reading {}: {}", filename, msg))
     }
 
+    static PART_ONE_Y_TEST: i128 = 10;
     #[test]
     fn test_one() -> Result<()> {
-        let answer = super::part_one(&TEST)?;
-        assert_eq!(answer, 0);
+        let answer = super::part_one(&TEST, PART_ONE_Y_TEST)?;
+        assert_eq!(answer, 26);
         Ok(())
     }
 
@@ -210,16 +214,17 @@ mod tests {
     #[test]
     fn part_one() -> Result<()> {
         let t = std::time::Instant::now();
-        let answer = super::part_one(&INPUT)?;
+        let answer = super::part_one(&INPUT, PART_ONE_Y)?;
         eprintln!("Part one took {:0.2?}", t.elapsed());
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 4737567);
         Ok(())
     }
 
+    static PART_TWO_MAX_TEST: i128 = 20;
     #[test]
     fn test_two() -> Result<()> {
-        let answer = super::part_two(&TEST)?;
-        assert_eq!(answer, 0);
+        let answer = super::part_two(&TEST, PART_TWO_MAX_TEST)?;
+        assert_eq!(answer, 56000011);
         Ok(())
     }
 
@@ -227,9 +232,9 @@ mod tests {
     #[test]
     fn part_two() -> Result<()> {
         let t = std::time::Instant::now();
-        let answer = super::part_two(&INPUT)?;
+        let answer = super::part_two(&INPUT, PART_TWO_MAX)?;
         eprintln!("Part two took {:0.2?}", t.elapsed());
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 13267474686239);
         Ok(())
     }
 }
