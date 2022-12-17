@@ -71,6 +71,7 @@ struct TaskData {
     jets_index: usize,
     jets: Vec<Jet>,
     rested: HashSet<Pos>,
+    current_ground: i128, // the highest fully filled line
 }
 
 impl TaskData {
@@ -108,7 +109,7 @@ impl TaskData {
         }
         let intersect = rock
             .iter()
-            .filter(|p| p.x == 0 || p.x == 8 || p.y == 0)
+            .filter(|p| p.x == 0 || p.x == 8 || p.y == self.current_ground)
             .count();
         intersect > 0
     }
@@ -149,14 +150,41 @@ impl TaskData {
             if self.intersect(&falled) {
                 self.rested = self.rested.union(&current).map(|&p| p).collect();
                 self.highest = cmp::max(self.highest, current.iter().map(|p| p.y).max().unwrap());
+                self.cleanup(&current);
                 return;
             } else {
                 current = falled.clone();
             }
         }
     }
+    fn cleanup(&mut self, current: &HashSet<Pos>) {
+        // check if any line where the tile landed is complete
+        let mut lines_to_check = current.iter().map(|p| p.y).collect::<Vec<_>>();
+        lines_to_check.sort_by(|a, b| b.cmp(a));
+        for y in lines_to_check {
+            let mut amount = 0;
+            for x in 1..=7 {
+                if self.rested.contains(&Pos { x, y }) {
+                    amount += 1;
+                }
+            }
+            if amount == 7 {
+                // line's full
+                self.current_ground = y;
+                self.discard_rested_at_and_below(y);
+                return;
+            }
+        }
+    }
+    fn discard_rested_at_and_below(&mut self, y: i128) {
+        self.rested = self.rested.iter().map(|&p| p).filter(|p| p.y > y).collect();
+    }
     fn run_n_rocks(&mut self, n: i128) {
-        for _ in 1..=n {
+        for i in 1..=n {
+            if i % 10_000_000_000 == 0 {
+                // 8:13 started
+                println!("rock {}", i);
+            }
             let rock = self.next_rock();
             self.handle_rock(&rock);
         }
@@ -230,6 +258,7 @@ fn parse_input(input: &str) -> Result<TaskData> {
         jets_index: 0,
         jets: jets[0].clone(),
         rested: HashSet::new(),
+        current_ground: 0,
     })
 }
 
@@ -241,8 +270,10 @@ fn part_one(input: &str) -> Result<i128> {
 }
 
 fn part_two(input: &str) -> Result<i128> {
-    let _ = parse_input(input)?;
-    Ok(-1)
+    let mut data = parse_input(input)?;
+    data.run_n_rocks(1_000_000_000_000);
+    //data.debug(None);
+    Ok(data.highest)
 }
 
 fn main() -> Result<()> {
