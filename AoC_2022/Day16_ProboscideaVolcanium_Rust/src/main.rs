@@ -6,26 +6,51 @@ use std::io::{self, Read};
 
 static TOTAL_TIME: i128 = 30;
 
-fn open(flow: i128, remaining: i128) -> i128 {
-    // open starts at_minute, takes one minute then releases until end
-    let released = flow * (remaining - 1);
-    released
+#[derive(Debug)]
+struct State {
+    node: String,
+    remaining_time: i128,
+    opened: BTreeSet<String>,
+}
+
+#[derive(Debug)]
+struct ElephantState {
+    elephant_node: String,
+    node: String,
+    remaining_time: i128,
+    opened: BTreeSet<String>,
 }
 
 #[derive(Debug)]
 struct TaskData {
     nodes: HashMap<String, i128>,
     adjacency: HashMap<String, Vec<String>>,
+    best_for_state: HashMap<State, i128>,
+    best_for_elephant_state: HashMap<ElephantState, i128>,
     best_release: HashMap<(String, i128, BTreeSet<String>), i128>, // (node, time, opened) -> released
-}
-struct QueueElem {
-    node: String,
-    remaining: i128,
-    released: i128,
-    opened: BTreeSet<String>,
 }
 
 impl TaskData {
+    fn open(flow: i128, remaining: i128) -> i128 {
+        // open starts at_minute, takes one minute then releases until end
+        let released = flow * (remaining - 1);
+        released
+    }
+    fn next_states(&self, state: State) -> Vec<State> {
+        todo!()
+    }
+    fn next_elephant_states(&self, state: ElephantState) -> Vec<ElephantState> {
+        todo!()
+    }
+    fn release_alone(&mut self, start: String) -> i128 {
+        todo!()
+    }
+    fn release_together(&mut self, start: String) -> i128 {
+        todo!()
+    }
+    fn can_be_pruned(&self, state: State) {
+        todo!()
+    }
     fn release_the_most(&mut self, start: String) -> i128 {
         self.bfs_with_prune(start);
         self.best_release
@@ -155,6 +180,8 @@ fn parse_input(input: &str) -> Result<TaskData> {
     let mut nodes = HashMap::new();
     let mut adjacency = HashMap::new();
     let mut best_release = HashMap::new();
+    let mut best_for_state = HashMap::new();
+    let mut best_for_elephant_state = HashMap::new();
     for line in input.lines() {
         let flow = i128::from_str_radix(&FLOW.captures(line).unwrap()[1], 10).unwrap();
         let nodes_cap: Vec<String> = NODES
@@ -170,6 +197,8 @@ fn parse_input(input: &str) -> Result<TaskData> {
     Ok(TaskData {
         nodes,
         adjacency,
+        best_for_state,
+        best_for_elephant_state,
         best_release,
     })
 }
@@ -184,7 +213,8 @@ fn part_one(input: &str) -> Result<i128> {
 }
 
 fn part_two(input: &str) -> Result<i128> {
-    let _ = parse_input(input)?;
+    let mut data = parse_input(input)?;
+    let answer = data.realse_the_most_together("AA");
     Ok(-1)
 }
 
@@ -215,7 +245,7 @@ mod tests {
     #[test]
     fn test_one() -> Result<()> {
         let answer = super::part_one(&TEST)?;
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 1651);
         Ok(())
     }
 
@@ -225,14 +255,14 @@ mod tests {
         let t = std::time::Instant::now();
         let answer = super::part_one(&INPUT)?;
         eprintln!("Part one took {:0.2?}", t.elapsed());
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 2029);
         Ok(())
     }
 
     #[test]
     fn test_two() -> Result<()> {
         let answer = super::part_two(&TEST)?;
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 1707);
         Ok(())
     }
 

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::cmp;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::io::{self, Read};
 
 // 7 wide
@@ -151,6 +151,9 @@ impl TaskData {
                 self.rested = self.rested.union(&current).map(|&p| p).collect();
                 self.highest = cmp::max(self.highest, current.iter().map(|p| p.y).max().unwrap());
                 self.cleanup(&current);
+                //self.cleanup2(); doesn't work
+                //self.cleanup_bfs(); doesn't help or doesn't work
+                self.heuristic_cleanup();
                 return;
             } else {
                 current = falled.clone();
@@ -170,19 +173,66 @@ impl TaskData {
             }
             if amount == 7 {
                 // line's full
-                self.current_ground = y;
                 self.discard_rested_at_and_below(y);
                 return;
             }
         }
     }
     fn discard_rested_at_and_below(&mut self, y: i128) {
+        self.current_ground = y;
         self.rested = self.rested.iter().map(|&p| p).filter(|p| p.y > y).collect();
+    }
+    fn cleanup2(&mut self) {
+        // the idea here is to find the largest y for each x and then use the min of those y's and discard below
+        let mut largest_y: Vec<i128> = vec![0; 7]; // 1 indexed
+        for pos in self.rested.iter() {
+            largest_y[(pos.x - 1) as usize] = cmp::max(largest_y[(pos.x - 1) as usize], pos.y);
+        }
+        let safe_to_discard = *largest_y.iter().min().unwrap();
+        self.discard_rested_at_and_below(safe_to_discard);
+    }
+    fn cleanup_bfs(&mut self) {
+        let lowest_reachable = self.find_lowest_reachable_bfs();
+        self.discard_rested_at_and_below(lowest_reachable - 1);
+    }
+    fn find_lowest_reachable_bfs(&self) -> i128 {
+        // just start one above the highest
+        let start = Pos {
+            x: 0,
+            y: self.highest + 1,
+        };
+        let mut queue = VecDeque::new();
+        let mut visited = HashSet::new();
+        queue.push_back(start);
+        visited.insert(start);
+        while let Some(pos) = queue.pop_front() {
+            // try down left right
+            let dx = vec![-1, 0, 1];
+            let dy = vec![0, -1, 0];
+            for i in 0..3 {
+                let nx = pos.x + dx[i];
+                let ny = pos.y + dy[i];
+                if nx == 0 || nx == 8 || ny == 0 {
+                    continue;
+                }
+                let npos = Pos { x: nx, y: ny };
+                if visited.contains(&npos) || self.rested.contains(&npos) {
+                    continue;
+                }
+                queue.push_back(npos);
+                visited.insert(npos);
+            }
+        }
+        visited.iter().map(|p| p.y).min().unwrap()
+    }
+    fn heuristic_cleanup(&mut self) {
+        // the idea is that after n rocks so many lines have to be filled even with perfect play
+        // 4 * tiles (tile has at least 4) / 7
+        //
     }
     fn run_n_rocks(&mut self, n: i128) {
         for i in 1..=n {
-            if i % 10_000_000_000 == 0 {
-                // 8:13 started
+            if i % 1_000_000_000 == 0 {
                 println!("rock {}", i);
             }
             let rock = self.next_rock();
@@ -266,6 +316,17 @@ fn part_one(input: &str) -> Result<i128> {
     let mut data = parse_input(input)?;
     data.run_n_rocks(2022);
     //data.debug(None);
+
+    let inner = 20;
+    let start: i128 = 0;
+    let end: i128 = 1_000_000_000_000;
+    for i in start..end {
+        let mut amount = 0;
+        for j in 0..inner {
+            amount += j % 1337;
+        }
+    }
+    println!("loop fin");
     Ok(data.highest)
 }
 
