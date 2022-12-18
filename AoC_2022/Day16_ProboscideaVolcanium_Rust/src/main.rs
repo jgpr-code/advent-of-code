@@ -86,7 +86,25 @@ impl TaskData {
         }
         elems
     }
+    // prune should happen if:
+    // 1. opened the same
+    // 2. already something better found with more or equal amount of time
     fn prune(&mut self, elem: &Elem) -> bool {
+        // try checking same states but with more time if any
+        let check_from = elem.state.remaining_time + 1;
+        let check_until = TOTAL_TIME;
+        for t in check_from..=check_until {
+            let state_to_check = State {
+                remaining_time: t,
+                node: elem.state.node.clone(),
+                opened: elem.state.opened.clone(),
+            };
+            if let Some(&best) = self.best_for_state.get(&state_to_check) {
+                if best >= elem.released {
+                    return true;
+                }
+            }
+        }
         if !self.best_for_state.contains_key(&elem.state) {
             self.best_for_state.insert(elem.state.clone(), 0);
             return false;
