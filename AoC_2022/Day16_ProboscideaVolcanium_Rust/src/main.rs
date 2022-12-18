@@ -6,28 +6,37 @@ use std::io::{self, Read};
 
 static TOTAL_TIME: i128 = 30;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct State {
-    node: String,
     remaining_time: i128,
+    node: String,
     opened: BTreeSet<String>,
 }
-
 #[derive(Debug)]
+struct Elem {
+    released: i128,
+    state: State,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct ElephantState {
-    elephant_node: String,
-    node: String,
     remaining_time: i128,
+    nodes: Vec<String>,
     opened: BTreeSet<String>,
+}
+#[derive(Debug)]
+struct ElephantElem {
+    released: i128,
+    state: ElephantState,
 }
 
 #[derive(Debug)]
 struct TaskData {
-    nodes: HashMap<String, i128>,
+    node_flows: HashMap<String, i128>,
     adjacency: HashMap<String, Vec<String>>,
     best_for_state: HashMap<State, i128>,
     best_for_elephant_state: HashMap<ElephantState, i128>,
-    best_release: HashMap<(String, i128, BTreeSet<String>), i128>, // (node, time, opened) -> released
+    // best_release: HashMap<(String, i128, BTreeSet<String>), i128>, // (node, time, opened) -> released
 }
 
 impl TaskData {
@@ -36,127 +45,97 @@ impl TaskData {
         let released = flow * (remaining - 1);
         released
     }
-    fn next_states(&self, state: State) -> Vec<State> {
-        todo!()
+    fn next_elems(&self, elem: Elem) -> Vec<Elem> {
+        let mut elems = Vec::new();
+
+        let old_released = elem.released;
+        let old_state = elem.state;
+        let flow = self.node_flows[&old_state.node];
+        // try open
+        if !old_state.opened.contains(&old_state.node) && flow > 0 {
+            let released = old_released + Self::open(flow, old_state.remaining_time);
+            let remaining_time = old_state.remaining_time - 1;
+            let node = old_state.node.clone();
+            let mut opened = old_state.opened.clone();
+            opened.insert(old_state.node.clone());
+            let next_state = State {
+                remaining_time,
+                node,
+                opened,
+            };
+            elems.push(Elem {
+                released,
+                state: next_state,
+            });
+        }
+        // try neighbors
+        for neigh in self.adjacency[&old_state.node].iter() {
+            let released = old_released;
+            let remaining_time = old_state.remaining_time - 1;
+            let node = neigh.clone();
+            let opened = old_state.opened.clone();
+            let next_state = State {
+                remaining_time,
+                node,
+                opened,
+            };
+            elems.push(Elem {
+                released,
+                state: next_state,
+            });
+        }
+        elems
     }
-    fn next_elephant_states(&self, state: ElephantState) -> Vec<ElephantState> {
-        todo!()
+    fn prune(&mut self, elem: &Elem) -> bool {
+        if !self.best_for_state.contains_key(&elem.state) {
+            self.best_for_state.insert(elem.state.clone(), 0);
+            return false;
+        }
+        let best = self.best_for_state[&elem.state];
+        best >= elem.released
     }
-    fn release_alone(&mut self, start: String) -> i128 {
-        todo!()
+    fn update_best(&mut self, elem: &Elem) {
+        self.best_for_state
+            .insert(elem.state.clone(), elem.released);
     }
-    fn release_together(&mut self, start: String) -> i128 {
-        todo!()
+    fn bfs(&mut self, start: String) {
+        let mut queue: VecDeque<Elem> = VecDeque::new();
+        let start = Elem {
+            released: 0,
+            state: State {
+                remaining_time: 30,
+                node: start,
+                opened: BTreeSet::new(),
+            },
+        };
+        queue.push_back(start);
+        while let Some(elem) = queue.pop_front() {
+            if elem.state.remaining_time <= 0 {
+                continue;
+            }
+            for next_elem in self.next_elems(elem).into_iter() {
+                // println!("{:?}", next_elem);
+                if !self.prune(&next_elem) {
+                    self.update_best(&next_elem);
+                    queue.push_back(next_elem);
+                }
+            }
+        }
     }
-    fn can_be_pruned(&self, state: State) {
-        todo!()
-    }
-    fn release_the_most(&mut self, start: String) -> i128 {
-        self.bfs_with_prune(start);
-        self.best_release
+    fn release(&mut self, start: String) -> i128 {
+        self.bfs(start);
+        // println!("{:?}", self.best_for_state);
+        self.best_for_state
             .iter()
             .map(|(_, released)| *released)
             .max()
             .unwrap()
     }
-    fn do_prune(
-        &self,
-        node: String,
-        remaining_time: i128,
-        opened: BTreeSet<String>,
-        released: i128,
-    ) -> bool {
-        let key = (node, remaining_time, opened);
-        if self.best_release.contains_key(&key) {
-            self.best_release[&key] >= released
-        } else {
-            false
-        }
-        //false
+    fn next_elephant_states(&self, state: ElephantState) -> Vec<ElephantState> {
+        todo!()
     }
-    fn update_best(
-        &mut self,
-        node: String,
-        remaining: i128,
-        opened: BTreeSet<String>,
-        released: i128,
-    ) {
-        let key = (node, remaining, opened);
-        if self.best_release.contains_key(&key) {
-            if self.best_release[&key] < released {
-                self.best_release.insert(key, released);
-            }
-        } else {
-            self.best_release.insert(key, released);
-        }
-    }
-    fn bfs_with_prune(&mut self, start: String) {
-        let mut queue: VecDeque<QueueElem> = VecDeque::new(); // at_min, released, remaining
-        queue.push_back(QueueElem {
-            node: start,
-            remaining: 30,
-            released: 0,
-            opened: BTreeSet::new(),
-        }); // node, remaining, released, opened, opened_str
-        while let Some(elem) = queue.pop_front() {
-            if elem.remaining <= 0 {
-                continue;
-            } // no time left => nothing to do
-              // try open
-            let flow = self.nodes[&elem.node];
-            if !elem.opened.contains(&elem.node) && flow > 0 {
-                let new_remaining = elem.remaining - 1; // open costs 1
-                let new_released = elem.released + open(flow, elem.remaining);
-                let mut new_opened = elem.opened.clone();
-                new_opened.insert(elem.node.clone());
-                if !self.do_prune(
-                    elem.node.clone(),
-                    new_remaining,
-                    new_opened.clone(),
-                    new_released,
-                ) {
-                    self.update_best(
-                        elem.node.clone(),
-                        new_remaining,
-                        new_opened.clone(),
-                        new_released,
-                    );
-                    queue.push_back(QueueElem {
-                        node: elem.node.clone(),
-                        remaining: new_remaining,
-                        released: new_released,
-                        opened: new_opened,
-                    });
-                }
-            }
-            // insert neighbors
-            let neighs: Vec<String> = self.adjacency[&elem.node].clone();
-            for neigh in neighs {
-                let new_remaining = elem.remaining - 1; // moving costs 1
-                let new_released = elem.released;
-                let new_opened = elem.opened.clone();
-
-                if !self.do_prune(
-                    neigh.clone(),
-                    new_remaining,
-                    new_opened.clone(),
-                    new_released,
-                ) {
-                    self.update_best(
-                        neigh.clone(),
-                        new_remaining,
-                        new_opened.clone(),
-                        new_released,
-                    );
-                    queue.push_back(QueueElem {
-                        node: neigh.clone(),
-                        remaining: new_remaining,
-                        released: new_released,
-                        opened: new_opened.clone(),
-                    });
-                }
-            }
-        }
+    fn release_together(&mut self, start: String) -> i128 {
+        todo!()
     }
 }
 
@@ -179,7 +158,6 @@ fn parse_input(input: &str) -> Result<TaskData> {
     }
     let mut nodes = HashMap::new();
     let mut adjacency = HashMap::new();
-    let mut best_release = HashMap::new();
     let mut best_for_state = HashMap::new();
     let mut best_for_elephant_state = HashMap::new();
     for line in input.lines() {
@@ -192,21 +170,19 @@ fn parse_input(input: &str) -> Result<TaskData> {
         nodes.insert(name.clone(), flow);
         let neighs: Vec<String> = nodes_cap.iter().skip(1).map(|s| s.clone()).collect();
         adjacency.insert(name.clone(), neighs);
-        best_release.insert((name.clone(), 30, BTreeSet::new()), 0);
     }
     Ok(TaskData {
-        nodes,
+        node_flows: nodes,
         adjacency,
         best_for_state,
         best_for_elephant_state,
-        best_release,
     })
 }
 
 fn part_one(input: &str) -> Result<i128> {
     let mut data = parse_input(input)?;
     //println!("{:?}", data);
-    let answer = data.release_the_most(String::from("AA"));
+    let answer = data.release(String::from("AA"));
     //println!("");
     //println!("{:?}", data);
     Ok(answer)
@@ -214,8 +190,8 @@ fn part_one(input: &str) -> Result<i128> {
 
 fn part_two(input: &str) -> Result<i128> {
     let mut data = parse_input(input)?;
-    let answer = data.realse_the_most_together("AA");
-    Ok(-1)
+    let answer = data.release_together(String::from("AA"));
+    Ok(answer)
 }
 
 fn main() -> Result<()> {
