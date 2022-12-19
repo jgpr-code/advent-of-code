@@ -1,10 +1,7 @@
 use anyhow::Result;
 use std::cmp;
-use std::collections::VecDeque;
-use std::{
-    collections::{HashMap, HashSet},
-    io::{self, Read},
-};
+use std::collections::{HashSet, VecDeque};
+use std::io::{self, Read};
 
 struct TaskData {
     blocks: Vec<(i128, i128, i128)>,
