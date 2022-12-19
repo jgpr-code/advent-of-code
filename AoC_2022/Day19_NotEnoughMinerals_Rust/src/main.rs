@@ -207,10 +207,13 @@ impl Simulation {
         }
         found
     }
-    fn quality_level(&self, start: State, minutes: i128) -> i128 {
+    fn max_cracked_geode(&self, start: State, minutes: i128) -> i128 {
         let simulated = self.simulate_all(minutes, &start);
         let max_cracked_geode = simulated.iter().map(|s| s.geode).max().unwrap();
-        self.blueprint.id * max_cracked_geode
+        max_cracked_geode
+    }
+    fn quality_level(&self, start: State, minutes: i128) -> i128 {
+        self.blueprint.id * self.max_cracked_geode(start, minutes)
     }
 }
 
@@ -251,7 +254,7 @@ fn part_one(input: &str) -> Result<i128> {
         print!("blueprint {}: ", i + 1);
         let s = Simulation::new(blueprint.clone());
         let t = std::time::Instant::now();
-        let q = s.quality_level(start.clone(), 32);
+        let q = s.quality_level(start.clone(), 24);
         let elapsed = t.elapsed();
         println!("{} ({}) in {:0.2?}", q, q / (i + 1) as i128, elapsed);
         total += q;
@@ -260,15 +263,32 @@ fn part_one(input: &str) -> Result<i128> {
 }
 
 fn part_two(input: &str) -> Result<i128> {
-    let _ = parse_input(input)?;
-    Ok(-1)
+    let TaskData { blueprints } = parse_input(input)?;
+    let start = State::start();
+    let mut total = 1;
+    for blueprint in blueprints.iter().take(3) {
+        print!("blueprint {}: ", blueprint.id);
+        let s = Simulation::new(blueprint.clone());
+        let t = std::time::Instant::now();
+        let cracked_geodes = s.max_cracked_geode(start.clone(), 32);
+        let elapsed = t.elapsed();
+        println!("cracked geodes {} in {:0.2?}", cracked_geodes, elapsed);
+        total *= cracked_geodes;
+    }
+    Ok(total)
 }
 
 fn main() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
-    println!("Part one: {}", part_one(&input)?);
-    println!("Part two: {}", part_two(&input)?);
+    let t = std::time::Instant::now();
+    let part_one = part_one(&input)?;
+    let elapsed = t.elapsed();
+    println!("Part one: {} in {:0.2?}", part_one, elapsed);
+    let t = std::time::Instant::now();
+    let part_two = part_two(&input)?;
+    let elapsed = t.elapsed();
+    println!("Part two: {} in {:0.2?}", part_two, elapsed);
     Ok(())
 }
 
@@ -291,7 +311,7 @@ mod tests {
     #[test]
     fn test_one() -> Result<()> {
         let answer = super::part_one(&TEST)?;
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 33);
         Ok(())
     }
 
@@ -301,14 +321,14 @@ mod tests {
         let t = std::time::Instant::now();
         let answer = super::part_one(&INPUT)?;
         eprintln!("Part one took {:0.2?}", t.elapsed());
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 1009);
         Ok(())
     }
 
     #[test]
     fn test_two() -> Result<()> {
         let answer = super::part_two(&TEST)?;
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 56 * 62);
         Ok(())
     }
 
@@ -318,7 +338,7 @@ mod tests {
         let t = std::time::Instant::now();
         let answer = super::part_two(&INPUT)?;
         eprintln!("Part two took {:0.2?}", t.elapsed());
-        assert_eq!(answer, 0);
+        assert_eq!(answer, 18816);
         Ok(())
     }
 }
