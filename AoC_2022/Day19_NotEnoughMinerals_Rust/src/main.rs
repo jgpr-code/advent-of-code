@@ -143,22 +143,29 @@ impl Simulation {
         let mut next_states = Vec::new();
         let mut ns = state.clone();
         ns.collect_minerals();
-        if state.ore_robots < self.blueprint.max_needed_ore_robots() && self.can_build_ore(state) {
+        let ore_saturated = state.ore_robots >= self.blueprint.max_needed_ore_robots();
+        let clay_saturated = state.clay_robots >= self.blueprint.max_needed_clay_robots();
+        let obsidian_saturated =
+            state.obisidian_robots >= self.blueprint.max_needed_obsidian_robots();
+        if !ore_saturated && self.can_build_ore(state) {
             next_states.push(self.build_ore(&ns));
         }
-        if state.clay_robots < self.blueprint.max_needed_clay_robots() && self.can_build_clay(state)
-        {
+        if !clay_saturated && self.can_build_clay(state) {
             next_states.push(self.build_clay(&ns));
         }
-        if state.obisidian_robots < self.blueprint.max_needed_obsidian_robots()
-            && self.can_build_obsidian(state)
-        {
+        if !obsidian_saturated && self.can_build_obsidian(state) {
             next_states.push(self.build_obsidian(&ns));
         }
-        if self.can_build_geode(state) {
+
+        if ore_saturated && clay_saturated && obsidian_saturated && self.can_build_geode(state) {
             next_states.push(self.build_geode(&ns));
+        } else {
+            if self.can_build_geode(state) {
+                next_states.push(self.build_geode(&ns));
+            }
+            next_states.push(ns);
         }
-        next_states.push(ns);
+
         next_states
     }
     fn prune_state(&self, states_at_min: &mut HashMap<i128, Vec<State>>, state: &State) -> bool {
@@ -191,9 +198,7 @@ impl Simulation {
                 found.push(s);
             } else {
                 for ns in self.next_states(&s) {
-                    if !visited.contains(&ns)
-                    /*&& !self.prune_state(&mut states_at_min, &ns)*/
-                    {
+                    if !visited.contains(&ns) && !self.prune_state(&mut states_at_min, &ns) {
                         visited.insert(ns.clone());
                         queue.push_back(ns);
                     }
@@ -202,8 +207,8 @@ impl Simulation {
         }
         found
     }
-    fn quality_level(&self, start: State) -> i128 {
-        let simulated = self.simulate_all(24, &start);
+    fn quality_level(&self, start: State, minutes: i128) -> i128 {
+        let simulated = self.simulate_all(minutes, &start);
         let max_cracked_geode = simulated.iter().map(|s| s.geode).max().unwrap();
         self.blueprint.id * max_cracked_geode
     }
@@ -246,7 +251,7 @@ fn part_one(input: &str) -> Result<i128> {
         print!("blueprint {}: ", i + 1);
         let s = Simulation::new(blueprint.clone());
         let t = std::time::Instant::now();
-        let q = s.quality_level(start.clone());
+        let q = s.quality_level(start.clone(), 32);
         let elapsed = t.elapsed();
         println!("{} ({}) in {:0.2?}", q, q / (i + 1) as i128, elapsed);
         total += q;
