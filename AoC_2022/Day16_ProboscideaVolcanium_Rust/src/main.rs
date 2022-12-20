@@ -1,33 +1,33 @@
 use anyhow::Result;
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::collections::{BTreeSet, HashMap, VecDeque};
+use std::cmp;
+use std::collections::{BTreeSet, BinaryHeap, HashMap, VecDeque};
 use std::io::{self, Read};
-
-static TOTAL_TIME: i128 = 30;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 struct State {
+    second: bool,
     remaining_time: i128,
     node: String,
     opened: BTreeSet<String>,
 }
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct Elem {
     released: i128,
     state: State,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-struct ElephantState {
-    remaining_time: i128,
-    nodes: Vec<String>,
-    opened: BTreeSet<String>,
+impl Ord for Elem {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.released.cmp(&other.released)
+    }
 }
-#[derive(Debug)]
-struct ElephantElem {
-    released: i128,
-    state: ElephantState,
+
+impl PartialOrd for Elem {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        Some(self.cmp(&other))
+    }
 }
 
 #[derive(Debug)]
@@ -35,8 +35,6 @@ struct TaskData {
     node_flows: HashMap<String, i128>,
     adjacency: HashMap<String, Vec<String>>,
     best_for_state: HashMap<State, i128>,
-    best_for_elephant_state: HashMap<ElephantState, i128>,
-    // best_release: HashMap<(String, i128, BTreeSet<String>), i128>, // (node, time, opened) -> released
 }
 
 impl TaskData {
@@ -59,6 +57,7 @@ impl TaskData {
             let mut opened = old_state.opened.clone();
             opened.insert(old_state.node.clone());
             let next_state = State {
+                second: old_state.second,
                 remaining_time,
                 node,
                 opened,
@@ -75,6 +74,7 @@ impl TaskData {
             let node = neigh.clone();
             let opened = old_state.opened.clone();
             let next_state = State {
+                second: old_state.second,
                 remaining_time,
                 node,
                 opened,
@@ -86,74 +86,87 @@ impl TaskData {
         }
         elems
     }
-    // prune should happen if:
-    // 1. opened the same
-    // 2. already something better found with more or equal amount of time
+
     fn prune(&mut self, elem: &Elem) -> bool {
-        // try checking same states but with more time if any
-        let check_from = elem.state.remaining_time + 1;
-        let check_until = TOTAL_TIME;
-        for t in check_from..=check_until {
-            let state_to_check = State {
-                remaining_time: t,
-                node: elem.state.node.clone(),
-                opened: elem.state.opened.clone(),
-            };
-            if let Some(&best) = self.best_for_state.get(&state_to_check) {
-                if best >= elem.released {
-                    return true;
+        let key = &elem.state;
+        // also update all nodes with less time and same pos, opened
+        if self.best_for_state.contains_key(key) {
+            let best = self.best_for_state[key];
+            if elem.released > best {
+                self.best_for_state.insert(key.clone(), elem.released);
+                for t in 0..=key.remaining_time {
+                    let mut ck = key.clone();
+                    ck.remaining_time = t;
+                    if !self.best_for_state.contains_key(&ck)
+                        || self.best_for_state[&ck] < elem.released
+                    {
+                        self.best_for_state.insert(ck.clone(), elem.released);
+                    }
+                }
+                return false;
+            } else {
+                return true;
+            }
+        } else {
+            let best = elem.released;
+            self.best_for_state.insert(key.clone(), best);
+            for t in 0..=key.remaining_time {
+                let mut ck = key.clone();
+                ck.remaining_time = t;
+                if !self.best_for_state.contains_key(&ck) || self.best_for_state[&ck] < best {
+                    self.best_for_state.insert(ck.clone(), best);
                 }
             }
-        }
-        if !self.best_for_state.contains_key(&elem.state) {
-            self.best_for_state.insert(elem.state.clone(), 0);
             return false;
-        }
-        let best = self.best_for_state[&elem.state];
-        best >= elem.released
+        };
     }
-    fn update_best(&mut self, elem: &Elem) {
-        self.best_for_state
-            .insert(elem.state.clone(), elem.released);
-    }
-    fn bfs(&mut self, start: String) {
+
+    fn bfs(&mut self, start_node: String, initial_time: i128, use_second: bool) {
         let mut queue: VecDeque<Elem> = VecDeque::new();
         let start = Elem {
             released: 0,
             state: State {
-                remaining_time: 30,
-                node: start,
+                second: false,
+                remaining_time: initial_time,
+                node: start_node.clone(),
                 opened: BTreeSet::new(),
             },
         };
         queue.push_back(start);
         while let Some(elem) = queue.pop_front() {
-            if elem.state.remaining_time <= 0 {
-                continue;
+            if elem.state.second && elem.state.remaining_time < 5 {
+                println!("{:?}", elem);
             }
-            for next_elem in self.next_elems(elem).into_iter() {
-                // println!("{:?}", next_elem);
+            if elem.state.remaining_time <= 0 {
+                if !use_second || elem.state.second {
+                    continue;
+                }
+                let mut next_elem = elem.clone();
+                next_elem.state.second = true;
+                next_elem.state.remaining_time = initial_time;
+                next_elem.state.node = start_node.clone();
                 if !self.prune(&next_elem) {
-                    self.update_best(&next_elem);
+                    // println!("{:?}", next_elem);
                     queue.push_back(next_elem);
+                }
+            } else {
+                for next_elem in self.next_elems(elem).into_iter() {
+                    // println!("{:?}", next_elem);
+                    if !self.prune(&next_elem) {
+                        queue.push_back(next_elem);
+                    }
                 }
             }
         }
     }
-    fn release(&mut self, start: String) -> i128 {
-        self.bfs(start);
+    fn release(&mut self, start: String, initial_time: i128, use_second: bool) -> i128 {
+        self.bfs(start, initial_time, use_second);
         // println!("{:?}", self.best_for_state);
         self.best_for_state
             .iter()
             .map(|(_, released)| *released)
             .max()
             .unwrap()
-    }
-    fn next_elephant_states(&self, state: ElephantState) -> Vec<ElephantState> {
-        todo!()
-    }
-    fn release_together(&mut self, start: String) -> i128 {
-        todo!()
     }
 }
 
@@ -176,8 +189,7 @@ fn parse_input(input: &str) -> Result<TaskData> {
     }
     let mut nodes = HashMap::new();
     let mut adjacency = HashMap::new();
-    let mut best_for_state = HashMap::new();
-    let mut best_for_elephant_state = HashMap::new();
+
     for line in input.lines() {
         let flow = i128::from_str_radix(&FLOW.captures(line).unwrap()[1], 10).unwrap();
         let nodes_cap: Vec<String> = NODES
@@ -192,15 +204,14 @@ fn parse_input(input: &str) -> Result<TaskData> {
     Ok(TaskData {
         node_flows: nodes,
         adjacency,
-        best_for_state,
-        best_for_elephant_state,
+        best_for_state: HashMap::new(),
     })
 }
 
 fn part_one(input: &str) -> Result<i128> {
     let mut data = parse_input(input)?;
     //println!("{:?}", data);
-    let answer = data.release(String::from("AA"));
+    let answer = data.release(String::from("AA"), 30, false);
     //println!("");
     //println!("{:?}", data);
     Ok(answer)
@@ -208,15 +219,21 @@ fn part_one(input: &str) -> Result<i128> {
 
 fn part_two(input: &str) -> Result<i128> {
     let mut data = parse_input(input)?;
-    let answer = data.release_together(String::from("AA"));
+    let answer = data.release(String::from("AA"), 26, true);
     Ok(answer)
 }
 
 fn main() -> Result<()> {
     let mut input = String::new();
     io::stdin().read_to_string(&mut input)?;
-    println!("Part one: {}", part_one(&input)?);
-    println!("Part two: {}", part_two(&input)?);
+    let t = std::time::Instant::now();
+    let part_one = part_one(&input)?;
+    let elapsed = t.elapsed();
+    println!("Part one: {} in {:0.2?}", part_one, elapsed);
+    let t = std::time::Instant::now();
+    let part_two = part_two(&input)?;
+    let elapsed = t.elapsed();
+    println!("Part two: {} in {:0.2?}", part_two, elapsed);
     Ok(())
 }
 
