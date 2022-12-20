@@ -59,9 +59,8 @@ struct RockTetris {
     highest: i128,
     ground_offset: i128,
     rested: BTreeSet<Pos>,
-    // store the encountered completions
-    // after completion with discard happened
-    // insert key: (rocks_index, jets_index, rested) value: ground_offset
+    // store the encountered completions after the discard happened
+    // insert key: (rocks_index, jets_index, rested) value: (total_rocks_dropped, ground_offset)
     encountered_completions: HashMap<(usize, usize, BTreeSet<Pos>), (i128, i128)>,
 }
 
@@ -147,7 +146,6 @@ impl RockTetris {
         }
     }
     fn handle_line_completion(&mut self, y: i128, n: i128) {
-        // line 1 complete => ground_offset += 1
         self.highest -= y;
         self.ground_offset += y;
         self.rested = self
@@ -209,8 +207,6 @@ impl RockTetris {
         }
     }
 }
-
-// Rock shapes repeat from top to bottom
 
 fn construct_rocks() -> Vec<BTreeSet<Pos>> {
     // 0 0 is always bottom left
@@ -357,74 +353,3 @@ mod tests {
         Ok(())
     }
 }
-
-// fn debug(&self, current: Option<&BTreeSet<Pos>>) {
-//     for y in (0..=20).rev() {
-//         for x in 0..=8 {
-//             if y == 0 {
-//                 print!("-");
-//             } else if x == 0 || x == 8 {
-//                 print!("|");
-//             } else {
-//                 if self.rested.contains(&Pos { x, y }) {
-//                     print!("#");
-//                 } else {
-//                     if let Some(falling) = current {
-//                         if falling.contains(&Pos { x, y }) {
-//                             print!("@");
-//                         } else {
-//                             print!(".");
-//                         }
-//                     } else {
-//                         print!(".");
-//                     }
-//                 }
-//             }
-//         }
-//         println!("");
-//     }
-// }
-
-// fn cleanup2(&mut self) {
-//     // the idea here is to find the largest y for each x and then use the min of those y's and discard below
-//     let mut largest_y: Vec<i128> = vec![0; 7]; // 1 indexed
-//     for pos in self.rested.iter() {
-//         largest_y[(pos.x - 1) as usize] = cmp::max(largest_y[(pos.x - 1) as usize], pos.y);
-//     }
-//     let safe_to_discard = *largest_y.iter().min().unwrap();
-//     self.discard_rested_at_and_below(safe_to_discard);
-// }
-// fn cleanup_bfs(&mut self) {
-//     let lowest_reachable = self.find_lowest_reachable_bfs();
-//     self.discard_rested_at_and_below(lowest_reachable - 1);
-// }
-// fn find_lowest_reachable_bfs(&self) -> i128 {
-//     // just start one above the highest
-//     let start = Pos {
-//         x: 0,
-//         y: self.highest + 1,
-//     };
-//     let mut queue = VecDeque::new();
-//     let mut visited = BTreeSet::new();
-//     queue.push_back(start);
-//     visited.insert(start);
-//     while let Some(pos) = queue.pop_front() {
-//         // try down left right
-//         let dx = vec![-1, 0, 1];
-//         let dy = vec![0, -1, 0];
-//         for i in 0..3 {
-//             let nx = pos.x + dx[i];
-//             let ny = pos.y + dy[i];
-//             if nx == 0 || nx == 8 || ny == 0 {
-//                 continue;
-//             }
-//             let npos = Pos { x: nx, y: ny };
-//             if visited.contains(&npos) || self.rested.contains(&npos) {
-//                 continue;
-//             }
-//             queue.push_back(npos);
-//             visited.insert(npos);
-//         }
-//     }
-//     visited.iter().map(|p| p.y).min().unwrap()
-// }
