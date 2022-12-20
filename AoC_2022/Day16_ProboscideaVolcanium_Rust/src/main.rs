@@ -1,8 +1,8 @@
 use anyhow::Result;
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::cmp;
-use std::collections::{BTreeSet, BinaryHeap, HashMap, VecDeque};
+// use std::cmp;
+use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::io::{self, Read};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -18,17 +18,17 @@ struct Elem {
     state: State,
 }
 
-impl Ord for Elem {
-    fn cmp(&self, other: &Self) -> cmp::Ordering {
-        self.released.cmp(&other.released)
-    }
-}
+// impl Ord for Elem {
+//     fn cmp(&self, other: &Self) -> cmp::Ordering {
+//         self.released.cmp(&other.released)
+//     }
+// }
 
-impl PartialOrd for Elem {
-    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
-        Some(self.cmp(&other))
-    }
-}
+// impl PartialOrd for Elem {
+//     fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+//         Some(self.cmp(&other))
+//     }
+// }
 
 #[derive(Debug)]
 struct TaskData {
@@ -94,13 +94,15 @@ impl TaskData {
             let best = self.best_for_state[key];
             if elem.released > best {
                 self.best_for_state.insert(key.clone(), elem.released);
-                for t in 0..=key.remaining_time {
-                    let mut ck = key.clone();
-                    ck.remaining_time = t;
-                    if !self.best_for_state.contains_key(&ck)
-                        || self.best_for_state[&ck] < elem.released
-                    {
-                        self.best_for_state.insert(ck.clone(), elem.released);
+                if elem.state.second {
+                    for t in 0..=key.remaining_time {
+                        let mut ck = key.clone();
+                        ck.remaining_time = t;
+                        if !self.best_for_state.contains_key(&ck)
+                            || self.best_for_state[&ck] < elem.released
+                        {
+                            self.best_for_state.insert(ck.clone(), elem.released);
+                        }
                     }
                 }
                 return false;
@@ -110,11 +112,13 @@ impl TaskData {
         } else {
             let best = elem.released;
             self.best_for_state.insert(key.clone(), best);
-            for t in 0..=key.remaining_time {
-                let mut ck = key.clone();
-                ck.remaining_time = t;
-                if !self.best_for_state.contains_key(&ck) || self.best_for_state[&ck] < best {
-                    self.best_for_state.insert(ck.clone(), best);
+            if elem.state.second {
+                for t in 0..=key.remaining_time {
+                    let mut ck = key.clone();
+                    ck.remaining_time = t;
+                    if !self.best_for_state.contains_key(&ck) || self.best_for_state[&ck] < best {
+                        self.best_for_state.insert(ck.clone(), best);
+                    }
                 }
             }
             return false;
@@ -123,6 +127,7 @@ impl TaskData {
 
     fn bfs(&mut self, start_node: String, initial_time: i128, use_second: bool) {
         let mut queue: VecDeque<Elem> = VecDeque::new();
+        // let mut prio_queue: BinaryHeap<Elem> = BinaryHeap::new();
         let start = Elem {
             released: 0,
             state: State {
@@ -132,11 +137,10 @@ impl TaskData {
                 opened: BTreeSet::new(),
             },
         };
+        //prio_queue.push(start);
         queue.push_back(start);
+        //while let Some(elem) = prio_queue.pop() {
         while let Some(elem) = queue.pop_front() {
-            if elem.state.second && elem.state.remaining_time < 5 {
-                println!("{:?}", elem);
-            }
             if elem.state.remaining_time <= 0 {
                 if !use_second || elem.state.second {
                     continue;
@@ -148,12 +152,14 @@ impl TaskData {
                 if !self.prune(&next_elem) {
                     // println!("{:?}", next_elem);
                     queue.push_back(next_elem);
+                    // prio_queue.push(next_elem);
                 }
             } else {
                 for next_elem in self.next_elems(elem).into_iter() {
                     // println!("{:?}", next_elem);
                     if !self.prune(&next_elem) {
                         queue.push_back(next_elem);
+                        // prio_queue.push(next_elem);
                     }
                 }
             }
