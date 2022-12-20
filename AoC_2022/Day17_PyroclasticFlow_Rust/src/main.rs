@@ -134,13 +134,21 @@ impl RockTetris {
         for y in lines_to_check {
             let mut amount = 0;
             for x in 1..=7 {
-                if self.rested.contains(&Pos { x, y }) {
+                let fuzzy_line = self.rested.contains(&Pos { x, y })
+                    || self.rested.contains(&Pos { x, y: y - 1 })
+                    || self.rested.contains(&Pos { x, y: y - 2 })
+                    || self.rested.contains(&Pos { x, y: y - 3 });
+                if fuzzy_line {
                     amount += 1;
                 }
+                // let exact_line = self.rested.contains(&Pos { x, y });
+                // if exact_line {
+                //     amount += 1;
+                // }
             }
             if amount == 7 {
                 // line's full
-                self.handle_line_completion(y, n);
+                self.handle_line_completion(y - 3, n);
                 return;
             }
         }
@@ -338,8 +346,7 @@ mod tests {
 
     #[test]
     fn test_two() -> Result<()> {
-        //let answer = super::part_two(&TEST)?; // still to slow for test!
-        let answer: i128 = 1514285714288;
+        let answer = super::part_two(&TEST)?; // still to slow for test!
         assert_eq!(answer, 1514285714288);
         Ok(())
     }
