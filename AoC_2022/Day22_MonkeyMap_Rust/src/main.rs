@@ -1,7 +1,10 @@
 use anyhow::Result;
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::io::{self, Read};
+use std::{
+    io::{self, Read},
+    time::Duration,
+};
 
 #[derive(Debug, Clone)]
 enum Command {
@@ -27,9 +30,12 @@ struct TaskData {
     the_map: Vec<Vec<char>>,
     commands: Vec<Command>,
     warping_cube: bool,
+    invert_turns: bool,
 }
 impl TaskData {
     fn print(&self) {
+        //print!("\x1B[2J\x1B[1;1H");
+        //print!("{esc}c", esc = 27 as char);
         for row in 0..self.rows {
             for col in 0..self.cols {
                 if self.position.0 == (row as i128, col as i128) {
@@ -75,7 +81,7 @@ impl TaskData {
         0
     }
     fn determine_warping_cube(
-        &self,
+        &mut self,
         pos: (i128, i128),
         npos: &mut (i128, i128),
         facing: &mut usize,
@@ -98,6 +104,8 @@ impl TaskData {
         // e..e
         // eeee
 
+        // before warp
+
         let a_range_row = (0, 49);
         let a_range_col = (50, 99);
 
@@ -119,130 +127,218 @@ impl TaskData {
         // NOTE: this does not reflect walking on the cube surface as turns would need to be inverted in some cases
         // walk of:
 
+        // definite incorrect:
+        // 197179
+        // 40532
+
         if Self::in_area(pos, a_range_row, a_range_col) {
-            if npos.1 < pos.1 {
+            if npos.1 < a_range_col.0 {
                 println!("a left");
-                // a left: ar4 => cr1, new facing: right
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &2);
+                // a left: ar1 => cr4, new facing: right
                 let a_row = pos.0 - a_range_row.0;
                 let c_row = 49 - a_row + c_range_row.0;
                 npos.0 = c_row;
                 npos.1 = c_range_col.0;
                 *facing = 0;
-            } else if npos.0 < pos.0 {
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, c_range_row, c_range_col));
+                //self.invert_turns = !self.invert_turns;
+            } else if npos.0 < a_range_row.0 {
                 println!("a up");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &3);
                 // a up: ac1 => er1, new facing: right
                 let a_col = pos.1 - a_range_col.0;
                 let e_row = a_col + e_range_row.0;
                 npos.0 = e_row;
                 npos.1 = e_range_col.0;
                 *facing = 0;
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, e_range_row, e_range_col));
+                //self.invert_turns = !self.invert_turns;
             }
         } else if Self::in_area(pos, x_range_row, x_range_col) {
-            if npos.1 > pos.1 {
+            if npos.1 > x_range_col.1 {
                 println!("x right");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &0);
                 // x right: xr1 => dr4, new facing: left
                 let x_row = pos.0 - x_range_row.0;
                 let d_row = 49 - x_row + d_range_row.0;
                 npos.0 = d_row;
                 npos.1 = d_range_col.1;
                 *facing = 2;
-            } else if npos.0 > pos.0 {
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, d_range_row, d_range_col));
+                //self.invert_turns = !self.invert_turns;
+            } else if npos.0 > x_range_row.1 {
                 println!("x down");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &1);
                 // x down: xc1 => br1, new facing: left
                 let x_col = pos.1 - x_range_col.0;
                 let b_row = x_col + b_range_row.0;
                 npos.0 = b_row;
                 npos.1 = b_range_col.1;
                 *facing = 2;
-            } else if npos.0 < pos.0 {
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, b_range_row, b_range_col));
+                //self.invert_turns = !self.invert_turns;
+            } else if npos.0 < x_range_row.0 {
                 println!("x up");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &3);
                 // x up: xc1 => ec1, new facing: up
                 let x_col = pos.1 - x_range_col.0;
                 let e_col = x_col + e_range_col.0;
                 npos.0 = e_range_row.1;
                 npos.1 = e_col;
                 *facing = 3;
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, e_range_row, e_range_col));
             }
         } else if Self::in_area(pos, b_range_row, b_range_col) {
-            if npos.1 < pos.1 {
+            if npos.1 < b_range_col.0 {
                 println!("b left");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &2);
                 // b left: br1 => cc1, new facing: down
                 let b_row = pos.0 - b_range_row.0;
                 let c_col = b_row + c_range_col.0;
                 npos.0 = c_range_row.0;
                 npos.1 = c_col;
                 *facing = 1;
-            } else if npos.1 > pos.1 {
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, c_range_row, c_range_col));
+                //self.invert_turns = !self.invert_turns;
+            } else if npos.1 > b_range_col.1 {
                 println!("b right");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &0);
                 // b right: br1 => xc1, new facing: up
                 let b_row = pos.0 - b_range_row.0;
                 let x_col = b_row + x_range_col.0;
                 npos.0 = x_range_row.1;
                 npos.1 = x_col;
                 *facing = 3;
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, x_range_row, x_range_col));
+                //self.invert_turns = !self.invert_turns;
             }
         } else if Self::in_area(pos, c_range_row, c_range_col) {
-            if npos.1 < pos.1 {
+            if npos.1 < c_range_col.0 {
                 println!("c left");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &2);
                 // c left: cr1 => ar4, new facing: right
                 let c_row = pos.0 - c_range_row.0;
                 let a_row = 49 - c_row + a_range_row.0;
                 npos.0 = a_row;
                 npos.1 = a_range_col.0;
                 *facing = 0;
-            } else if npos.0 < pos.0 {
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, a_range_row, a_range_col));
+                //self.invert_turns = !self.invert_turns;
+            } else if npos.0 < c_range_row.0 {
                 println!("c up");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &3);
                 // c up: cc1 => br1, new facing: right
                 let c_col = pos.1 - c_range_col.0;
                 let b_row = c_col + b_range_row.0;
                 npos.0 = b_row;
                 npos.1 = b_range_col.0;
                 *facing = 0;
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, b_range_row, b_range_col));
+                //self.invert_turns = !self.invert_turns;
             }
         } else if Self::in_area(pos, d_range_row, d_range_col) {
-            if npos.1 > pos.1 {
+            if npos.1 > d_range_col.1 {
                 println!("d right");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &0);
                 // d right: dr1 => xr4, new facing: left
                 let d_row = pos.0 - d_range_row.0;
                 let x_row = 49 - d_row + x_range_row.0;
                 npos.0 = x_row;
                 npos.1 = x_range_col.1;
                 *facing = 2;
-            } else if npos.0 > pos.0 {
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, x_range_row, x_range_col));
+                //self.invert_turns = !self.invert_turns;
+            } else if npos.0 > d_range_row.1 {
                 println!("d down");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &1);
                 // d down: dc1 => er1, new facing: left
                 let d_col = pos.1 - d_range_col.0;
                 let e_row = d_col + e_range_row.0;
                 npos.0 = e_row;
                 npos.1 = e_range_col.1;
                 *facing = 2;
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, e_range_row, e_range_col));
+                //self.invert_turns = !self.invert_turns;
             }
         } else if Self::in_area(pos, e_range_row, e_range_col) {
-            if npos.1 > pos.1 {
+            if npos.1 > e_range_col.1 {
                 println!("e right");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &0);
                 // e right: er1 => dc1, new facing: up
                 let e_row = pos.0 - e_range_row.0;
                 let d_col = e_row + d_range_col.0;
                 npos.0 = d_range_row.1;
                 npos.1 = d_col;
                 *facing = 3;
-            } else if npos.0 > pos.0 {
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, d_range_row, d_range_col));
+                //self.invert_turns = !self.invert_turns;
+            } else if npos.0 > e_range_row.1 {
                 println!("e down");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &1);
                 // e down: ec1 => xc1, new facing down
                 let e_col = pos.1 - e_range_col.0;
                 let x_col = e_col + x_range_col.0;
                 npos.0 = x_range_row.0;
                 npos.1 = x_col;
                 *facing = 1;
-            } else if npos.1 < pos.1 {
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, x_range_row, x_range_col));
+            } else if npos.1 < e_range_col.0 {
                 println!("e left");
+                println!("before {:?},{} -> {:?}", pos, facing, npos);
+
+                assert_eq!(facing, &2);
                 // e left: er1 => ac1, new facing down
                 let e_row = pos.0 - e_range_row.0;
                 let a_col = e_row + a_range_col.0;
-                npos.0 = a_col;
-                npos.1 = a_range_col.0;
+                npos.0 = a_range_row.0;
+                npos.1 = a_col;
                 *facing = 1;
+                println!("after {:?} -> {:?},{}", pos, npos, facing);
+                assert!(Self::in_area(*npos, a_range_row, a_range_col));
+                //self.invert_turns = !self.invert_turns;
             }
+        } else {
+            panic!("point was in no area");
         }
     }
     fn forward(&mut self, amount: i128) {
@@ -250,15 +346,20 @@ impl TaskData {
         let dcol = vec![1, 0, -1, 0];
 
         for _step in 0..amount {
+            // self.print();
+            // std::thread::sleep(Duration::from_millis(200));
             let pos = self.position.0;
             let mut facing = self.position.1;
+            let old_facing = facing;
             let mut npos = (pos.0 + drow[facing], pos.1 + dcol[facing]);
             if !self.warping_cube {
                 self.determine_warping(pos, &mut npos);
             } else {
                 self.determine_warping_cube(pos, &mut npos, &mut facing);
             }
-            if self.the_map[npos.0 as usize][npos.1 as usize] != '#' {
+            let check = self.the_map[npos.0 as usize][npos.1 as usize];
+            if check != '#' {
+                assert_ne!(check, ' ');
                 self.position = (npos, facing);
                 // only for rendering
                 self.the_map[pos.0 as usize][pos.1 as usize] = match facing {
@@ -276,11 +377,24 @@ impl TaskData {
     fn execute_commands(&mut self) {
         let commands = self.commands.clone();
         for command in commands {
+            //println!("{:?}", command);
             match command {
                 Command::Forward(amount) => self.forward(amount),
                 Command::Turn(dir) => match dir {
-                    'R' => self.turn_right(),
-                    'L' => self.turn_left(),
+                    'R' => {
+                        if self.invert_turns {
+                            self.turn_left()
+                        } else {
+                            self.turn_right()
+                        }
+                    }
+                    'L' => {
+                        if self.invert_turns {
+                            self.turn_right()
+                        } else {
+                            self.turn_left()
+                        }
+                    }
                     _ => panic!("Only R or L is allowed for turns"),
                 },
             }
@@ -356,6 +470,7 @@ fn parse_input(input: &str) -> Result<TaskData> {
         the_map,
         commands,
         warping_cube: false,
+        invert_turns: false,
     })
 }
 fn parse_commands(input: &str) -> Vec<Command> {
