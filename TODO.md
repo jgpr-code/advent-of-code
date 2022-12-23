@@ -4,6 +4,77 @@ Place for general Todos:
 
 - [Todo] Transfer solutions from 2020 from Google account to GitHub account
 
+- [Todo] Go through Rust tools list and see what those do
+
+Tools
+cargo authors
+cargo about
+cargo afl
+cargo asm
+cargo apk
+cargo audit
+cargo aur
+cargo bitbake
+cargo bloat
+cargo bom
+cargo all-features
+cargo bundle
+cargo cache
+cargo checkmate
+cargo chef
+cargo clippy
+cargo cmd
+
+cargo criterion
+cargo deadlink
+cargo deny
+cargo depgraph
+cargo docs
+cargo edit
+cargo espflash
+cargo expand
+cargo fmt
+cargo fuzz
+cargo geiger
+cargo generate-rpm
+cargo hack
+cargo hackerman
+cargo inspect
+cargo instruments
+cargo lambda
+cargo license
+
+cargo lichking
+cargo lockdiff
+cargo metadata
+cargo merge
+cargo miri
+cargo modules
+cargo ndk
+cargo native install
+cargo outdated
+cargo pants
+cargo prune
+cargo ramdisk
+cargo rdme
+cargo show
+cargo sort
+cargo sonar
+cargo spellcheck
+cargo sphinx
+
+cargo sweep
+cargo tally
+cargo task
+cargo tree
+cargo tarpaulin
+cargo todo
+cargo update
+cargo udeps
+cargo watch
+flamegraph
+typos
+
 ## AoC 2021
 
 Used account: **GitHub**
@@ -17,12 +88,6 @@ Used account: **GitHub**
 - [Todo] Day 22
 - [Todo] Day 23
 - [Todo] Day 24
-- [Todo] Day 25
-
-## AoC 2020
-
-Used account: **Google**
-
 - [Todo] Day 25
 
 ## AoC 2019
