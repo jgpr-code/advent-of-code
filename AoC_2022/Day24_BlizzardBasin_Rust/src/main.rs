@@ -1,12 +1,12 @@
 use anyhow::Result;
 use std::cmp::Reverse; // to make a min heap push elems wrapped in Reverse
-use std::collections::{BinaryHeap, HashMap}; // max heap
+use std::collections::{BinaryHeap, HashMap, HashSet}; // max heap
 use std::io::{self, Read};
 use std::ops::{Add, Neg, Sub};
 
 // implement simulation + a*
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Vec2d {
     x: i128,
     y: i128,
@@ -39,15 +39,22 @@ impl Vec2d {
     fn new(x: i128, y: i128) -> Self {
         Vec2d { x, y }
     }
+    fn manhattan(&self, other: &Vec2d) -> i128 {
+        let delta = *self - *other;
+        delta.x.abs() + delta.y.abs()
+    }
 }
 
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 struct State {
-    time: i128,
+    time: usize,
+    manhattan_to_target: i128,
     pos: Vec2d,
 }
 
 struct TaskData {
-    directions: Vec<Vec2d>,                     // 0 = >, 1 = v, 2 = <, 3 = ^
+    directions: Vec<Vec2d>, // 0 = >, 1 = v, 2 = <, 3 = ^
+    blizzards_modulus: usize,
     blizzards: Vec<HashMap<Vec2d, Vec<usize>>>, // blizzard at, directions_index
     start: Vec2d,
     target: Vec2d,
@@ -56,6 +63,7 @@ struct TaskData {
 }
 impl TaskData {
     fn print_time(&self, time: usize) {
+        let time = time % self.blizzards_modulus;
         for row in 0..self.rows {
             for col in 0..self.cols {
                 let pos = Vec2d::new(row, col);
@@ -89,18 +97,25 @@ impl TaskData {
             println!("");
         }
     }
-    fn next_blizzards(&mut self) {
-        let current_blizzards = self.blizzards.last().unwrap().clone();
-        let mut new_blizzards: HashMap<Vec2d, Vec<usize>> = HashMap::new();
-        for (pos, blizzards) in current_blizzards {
-            for blizzard in blizzards {
-                let mut new_pos = pos + self.directions[blizzard];
-                self.wrap_pos(&mut new_pos);
-                let vec = new_blizzards.entry(new_pos).or_insert(Vec::new());
-                vec.push(blizzard);
+    fn simulate_blizzard_states(&mut self) {
+        loop {
+            let current_blizzards = self.blizzards.last().unwrap().clone();
+            let mut new_blizzards: HashMap<Vec2d, Vec<usize>> = HashMap::new();
+            for (pos, blizzards) in current_blizzards {
+                for blizzard in blizzards {
+                    let mut new_pos = pos + self.directions[blizzard];
+                    self.wrap_pos(&mut new_pos);
+                    let vec = new_blizzards.entry(new_pos).or_insert(Vec::new());
+                    vec.push(blizzard);
+                }
+            }
+            if new_blizzards == self.blizzards[0] {
+                return;
+            } else {
+                self.blizzards_modulus += 1;
+                self.blizzards.push(new_blizzards);
             }
         }
-        self.blizzards.push(new_blizzards);
     }
     fn wrap_pos(&self, pos: &mut Vec2d) {
         if pos.x == 0 {
@@ -113,6 +128,57 @@ impl TaskData {
         } else if pos.y == self.cols - 1 {
             pos.y = 1;
         }
+    }
+    fn is_possible(&self, pos: &Vec2d, time: usize) -> bool {
+        if pos.x == 0 || pos.x == self.rows - 1 || pos.y == 0 || pos.y == self.cols - 1 {
+            return false; // don't go in walls
+        }
+        let blizzard_time = time % self.blizzards_modulus;
+        if self.blizzards[blizzard_time].contains_key(pos) {
+            return false;
+        }
+        true
+    }
+    // assumes simulate_blizzard_states was run before!
+    fn find_path(&self) -> usize {
+        let mut prio_queue = BinaryHeap::new();
+        let mut visited = HashSet::new();
+        visited.insert((0 % self.blizzards_modulus, self.start));
+        prio_queue.push(Reverse(State {
+            time: 0,
+            manhattan_to_target: self.start.manhattan(&self.target),
+            pos: self.start,
+        }));
+        while let Some(Reverse(state)) = prio_queue.pop() {
+            let ntime = state.time + 1;
+            //println!("time: {}", ntime);
+            for dir in self.directions.iter() {
+                let npos = state.pos + *dir;
+                if npos == self.target {
+                    return ntime; // best found
+                }
+                let check = (ntime % self.blizzards_modulus, npos);
+                if !visited.contains(&check) && self.is_possible(&npos, ntime) {
+                    prio_queue.push(Reverse(State {
+                        time: ntime,
+                        manhattan_to_target: npos.manhattan(&self.target),
+                        pos: npos,
+                    }));
+                    visited.insert(check);
+                }
+            }
+            let npos_wait = state.pos;
+            let check = (ntime % self.blizzards_modulus, npos_wait);
+            if !visited.contains(&check) && self.is_possible(&npos_wait, ntime) {
+                prio_queue.push(Reverse(State {
+                    time: ntime,
+                    manhattan_to_target: npos_wait.manhattan(&self.target),
+                    pos: npos_wait,
+                }));
+                visited.insert(check);
+            }
+        }
+        panic!("no target found");
     }
 }
 
@@ -166,6 +232,7 @@ fn parse_input(input: &str) -> Result<TaskData> {
 
     Ok(TaskData {
         directions,
+        blizzards_modulus: 1,
         blizzards,
         start,
         target,
@@ -176,14 +243,13 @@ fn parse_input(input: &str) -> Result<TaskData> {
 
 fn part_one(input: &str) -> Result<i128> {
     let mut data = parse_input(input)?;
-    for _ in 0..10 {
-        data.next_blizzards();
-    }
+    data.simulate_blizzard_states();
     for i in 0..10 {
         data.print_time(i);
         println!("");
     }
-    Ok(-1)
+    println!("{}", data.blizzards_modulus);
+    Ok(data.find_path() as i128)
 }
 
 fn part_two(input: &str) -> Result<i128> {
