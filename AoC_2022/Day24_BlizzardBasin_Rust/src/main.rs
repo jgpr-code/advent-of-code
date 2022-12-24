@@ -131,7 +131,7 @@ impl TaskData {
     }
     fn is_possible(&self, pos: &Vec2d, time: usize) -> bool {
         if pos.x == 0 || pos.x == self.rows - 1 || pos.y == 0 || pos.y == self.cols - 1 {
-            return false; // don't go in walls
+            return *pos == self.start || *pos == self.target;
         }
         let blizzard_time = time % self.blizzards_modulus;
         if self.blizzards[blizzard_time].contains_key(pos) {
@@ -140,28 +140,28 @@ impl TaskData {
         true
     }
     // assumes simulate_blizzard_states was run before!
-    fn find_path(&self) -> usize {
+    fn find_path(&self, initial_time: usize, from: &Vec2d, to: &Vec2d) -> usize {
         let mut prio_queue = BinaryHeap::new();
         let mut visited = HashSet::new();
-        visited.insert((0 % self.blizzards_modulus, self.start));
+        visited.insert((initial_time % self.blizzards_modulus, *from));
         prio_queue.push(Reverse(State {
-            time: 0,
-            manhattan_to_target: self.start.manhattan(&self.target),
-            pos: self.start,
+            time: initial_time,
+            manhattan_to_target: from.manhattan(&to),
+            pos: *from,
         }));
         while let Some(Reverse(state)) = prio_queue.pop() {
             let ntime = state.time + 1;
             //println!("time: {}", ntime);
             for dir in self.directions.iter() {
                 let npos = state.pos + *dir;
-                if npos == self.target {
+                if npos == *to {
                     return ntime; // best found
                 }
                 let check = (ntime % self.blizzards_modulus, npos);
                 if !visited.contains(&check) && self.is_possible(&npos, ntime) {
                     prio_queue.push(Reverse(State {
                         time: ntime,
-                        manhattan_to_target: npos.manhattan(&self.target),
+                        manhattan_to_target: npos.manhattan(to),
                         pos: npos,
                     }));
                     visited.insert(check);
@@ -172,7 +172,7 @@ impl TaskData {
             if !visited.contains(&check) && self.is_possible(&npos_wait, ntime) {
                 prio_queue.push(Reverse(State {
                     time: ntime,
-                    manhattan_to_target: npos_wait.manhattan(&self.target),
+                    manhattan_to_target: npos_wait.manhattan(to),
                     pos: npos_wait,
                 }));
                 visited.insert(check);
@@ -244,17 +244,15 @@ fn parse_input(input: &str) -> Result<TaskData> {
 fn part_one(input: &str) -> Result<i128> {
     let mut data = parse_input(input)?;
     data.simulate_blizzard_states();
-    for i in 0..10 {
-        data.print_time(i);
-        println!("");
-    }
-    println!("{}", data.blizzards_modulus);
-    Ok(data.find_path() as i128)
+    Ok(data.find_path(0, &data.start, &data.target) as i128)
 }
 
 fn part_two(input: &str) -> Result<i128> {
-    let _ = parse_input(input)?;
-    Ok(-1)
+    let mut data = parse_input(input)?;
+    data.simulate_blizzard_states();
+    let s_to_t = data.find_path(0, &data.start, &data.target);
+    let t_to_s = data.find_path(s_to_t, &data.target, &data.start);
+    Ok(data.find_path(t_to_s, &data.start, &data.target) as i128)
 }
 
 fn main() -> Result<()> {
