@@ -62,7 +62,7 @@ struct TaskData {
     cols: i128,
 }
 impl TaskData {
-    fn print_time(&self, time: usize) {
+    fn _print_time(&self, time: usize) {
         let time = time % self.blizzards_modulus;
         for row in 0..self.rows {
             for col in 0..self.cols {
