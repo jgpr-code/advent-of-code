@@ -76,14 +76,9 @@ fn part_one(input: &str) -> Result<String> {
     for snafu in snafu_numbers {
         sum += snafu_to_i128(&snafu);
     }
-    println!("dez: {}", sum);
+    println!("dezimal sum: {}", sum);
     let snafu = i128_to_snafu(sum);
     Ok(String::from_iter(snafu.iter()))
-}
-
-fn part_two(input: &str) -> Result<i128> {
-    let _ = parse_input(input)?;
-    Ok(-1)
 }
 
 fn main() -> Result<()> {
@@ -93,10 +88,6 @@ fn main() -> Result<()> {
     let part_one = part_one(&input)?;
     let elapsed = t.elapsed();
     println!("Part one: {} in {:0.2?}", part_one, elapsed);
-    let t = std::time::Instant::now();
-    let part_two = part_two(&input)?;
-    let elapsed = t.elapsed();
-    println!("Part two: {} in {:0.2?}", part_two, elapsed);
     Ok(())
 }
 
@@ -119,7 +110,7 @@ mod tests {
     #[test]
     fn test_one() -> Result<()> {
         let answer = super::part_one(&TEST)?;
-        assert_eq!(answer, "0");
+        assert_eq!(answer, "2=-1=0");
         Ok(())
     }
 
@@ -129,24 +120,7 @@ mod tests {
         let t = std::time::Instant::now();
         let answer = super::part_one(&INPUT)?;
         eprintln!("Part one took {:0.2?}", t.elapsed());
-        assert_eq!(answer, "0");
-        Ok(())
-    }
-
-    #[test]
-    fn test_two() -> Result<()> {
-        let answer = super::part_two(&TEST)?;
-        assert_eq!(answer, 0);
-        Ok(())
-    }
-
-    // Use "cargo test --release -- part_two --nocapture" to print the time
-    #[test]
-    fn part_two() -> Result<()> {
-        let t = std::time::Instant::now();
-        let answer = super::part_two(&INPUT)?;
-        eprintln!("Part two took {:0.2?}", t.elapsed());
-        assert_eq!(answer, 0);
+        assert_eq!(answer, "2=000=22-0-102=-1001");
         Ok(())
     }
 }
