@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Context, Result};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::HashSet;
+//use std::collections::{HashMap, VecDeque};
 use std::io::{self, Read};
 
 struct TaskData {
@@ -78,12 +79,14 @@ fn find_marker_slow(marker_len: usize, signal: &[char]) -> Result<usize> {
     }
 }
 
-struct FastMarkerFinder<const MARKER_LEN: usize> {
-    index: usize,
-    unique_count: usize,
-    current_chunk: VecDeque<char>,
-    encounters: HashMap<char, usize>,
-}
+// TODO: implement a really fast version
+
+// struct FastMarkerFinder<const MARKER_LEN: usize> {
+//     index: usize,
+//     unique_count: usize,
+//     current_chunk: VecDeque<char>,
+//     encounters: HashMap<char, usize>,
+// }
 // a b c a
 // count = 3
 // unique = 2
@@ -92,14 +95,14 @@ struct FastMarkerFinder<const MARKER_LEN: usize> {
 // map {a: 1} {b: 2} {c: 1}
 // unique 2 count 3
 
-fn find_marker_fast(marker_len: usize, signal: &[char]) -> usize {
-    let mut sig_iter = signal.iter();
-    let foo = sig_iter.take(marker_len);
-    for f in foo {}
-    let d: VecDeque<char> = VecDeque::from_iter(foo.cloned());
-    let set: HashSet<char> = HashSet::from_iter(foo.cloned());
-    0
-}
+// fn find_marker_fast(marker_len: usize, signal: &[char]) -> usize {
+//     let mut sig_iter = signal.iter();
+//     let foo = sig_iter.take(marker_len);
+//     for f in foo {}
+//     let d: VecDeque<char> = VecDeque::from_iter(foo.cloned());
+//     let set: HashSet<char> = HashSet::from_iter(foo.cloned());
+//     0
+// }
 
 fn first_start_of_message_marker_slow(signal: &[char]) -> Result<usize> {
     let marker_len = 14;

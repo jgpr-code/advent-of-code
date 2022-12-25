@@ -63,7 +63,7 @@ impl TaskData {
         }
     }
     fn count_sand(&self) -> i128 {
-        self.grid.iter().filter(|(k, v)| **v == 'O').count() as i128
+        self.grid.iter().filter(|(_k, v)| **v == 'O').count() as i128
     }
 }
 
