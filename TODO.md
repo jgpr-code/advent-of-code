@@ -2,7 +2,9 @@
 
 Place for general Todos:
 
-- [Todo] Transfer solutions from 2020 from Google account to GitHub account
+- [Todo] Reconsider the project structure
+  - Having an own project for every day can consume a lot of space 1.5GB for 2022 in Rust alone!
+  - Maybe I should instead have one project for each language e.g. (AoC_2022/Rust/)
 
 - [Todo] Go through Rust tools list and see what those do
 
